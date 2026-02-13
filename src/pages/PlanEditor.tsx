@@ -267,19 +267,19 @@ const PlanEditor: React.FC = () => {
   // MOCK_SPOTS moved to local variable or outside component, but since it was removed by mistake in previous edits, let's restore it.
   const MOCK_SPOTS: Record<string, Spot[]> = {
     '北京': [
-      { id: '1', name: '故宫博物院', image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/Forbidden_City_Beijing_Shenwu_Gate_2004_January.jpg/640px-Forbidden_City_Beijing_Shenwu_Gate_2004_January.jpg', duration: 4.0, tag: '必游' },
-      { id: '2', name: '景山公园', image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Jingshan_Wanchun_Pavilion.jpg/640px-Jingshan_Wanchun_Pavilion.jpg', duration: 1.5 },
-      { id: '3', name: '南锣鼓巷', image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/37/Nanluoguxiang_2010.jpg/640px-Nanluoguxiang_2010.jpg', duration: 2.0 },
-      { id: '4', name: '天坛公园', image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Temple_of_Heaven_Hall_of_Prayer_for_Good_Harvests_2004_January.jpg/640px-Temple_of_Heaven_Hall_of_Prayer_for_Good_Harvests_2004_January.jpg', duration: 3.0, tag: '世界遗产' },
-      { id: '5', name: '国家博物馆', image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/National_Museum_of_China_2017.jpg/640px-National_Museum_of_China_2017.jpg', duration: 4.0, tag: '热门' },
-      { id: '6', name: '颐和园', image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/96/Summer_Palace_Beijing.jpg/640px-Summer_Palace_Beijing.jpg', duration: 4.0, tag: '皇家园林' },
-      { id: '7', name: '圆明园', image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Ruins_of_the_Old_Summer_Palace.jpg/640px-Ruins_of_the_Old_Summer_Palace.jpg', duration: 3.0 },
-      { id: '8', name: '雍和宫', image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Yonghe_Temple_2010.jpg/640px-Yonghe_Temple_2010.jpg', duration: 2.0 },
+      { id: '1', name: '故宫博物院', image: 'https://images.unsplash.com/photo-1599661046289-e31897846e41?auto=format&fit=crop&q=80&w=800', duration: 4.0, tag: '必游' },
+      { id: '2', name: '景山公园', image: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?auto=format&fit=crop&q=80&w=800', duration: 1.5 },
+      { id: '3', name: '南锣鼓巷', image: 'https://images.unsplash.com/photo-1545063328-c8e3fafa16f9?auto=format&fit=crop&q=80&w=800', duration: 2.0 },
+      { id: '4', name: '天坛公园', image: 'https://images.unsplash.com/photo-1598327772641-7299a4c8405d?auto=format&fit=crop&q=80&w=800', duration: 3.0, tag: '世界遗产' },
+      { id: '5', name: '国家博物馆', image: 'https://images.unsplash.com/photo-1565060169689-5f2b2e143c68?auto=format&fit=crop&q=80&w=800', duration: 4.0, tag: '热门' },
+      { id: '6', name: '颐和园', image: 'https://images.unsplash.com/photo-1528695782088-3486241a8775?auto=format&fit=crop&q=80&w=800', duration: 4.0, tag: '皇家园林' },
+      { id: '7', name: '圆明园', image: 'https://images.unsplash.com/photo-1600619842852-c62d0801a613?auto=format&fit=crop&q=80&w=800', duration: 3.0 },
+      { id: '8', name: '雍和宫', image: 'https://images.unsplash.com/photo-1626507422634-97216a759088?auto=format&fit=crop&q=80&w=800', duration: 2.0 },
     ],
     'default': [
-      { id: '101', name: '市中心博物馆', image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Colosseum_in_Rome%2C_Italy_-_April_2007.jpg/640px-Colosseum_in_Rome%2C_Italy_-_April_2007.jpg', duration: 3.0, tag: '必游' },
-      { id: '102', name: '城市公园', image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Altja_j%C3%B5gi_Lahemaal.jpg/640px-Altja_j%C3%B5gi_Lahemaal.jpg', duration: 2.0 },
-      { id: '103', name: '特色古街', image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/Paris_Night.jpg/640px-Paris_Night.jpg', duration: 2.5 },
+      { id: '101', name: '市中心博物馆', image: 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?auto=format&fit=crop&q=80&w=800', duration: 3.0, tag: '必游' },
+      { id: '102', name: '城市公园', image: 'https://images.unsplash.com/photo-1496568816309-51d7c20e3b21?auto=format&fit=crop&q=80&w=800', duration: 2.0 },
+      { id: '103', name: '特色古街', image: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&q=80&w=800', duration: 2.5 },
     ]
   };
 

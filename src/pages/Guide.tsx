@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Camera, Mic, Play, X, Plus, MessageCircle, Send, Map, ChevronDown, Compass, MapPin, Search, Loader2, Globe, Eye, EyeOff, Images, Volume2, StopCircle, Keyboard, History, Trash2, MessageSquarePlus, Lock } from 'lucide-react';
+import { Camera, Mic, Play, X, Plus, MessageCircle, Send, Map, ChevronDown, Compass, MapPin, Search, Loader2, Globe, Volume2, StopCircle, Keyboard, History, Trash2, MessageSquarePlus, Lock } from 'lucide-react';
 import L from 'leaflet';
 
 import { chatService, type ChatSession, type ChatMessage } from '../services/chat';
@@ -18,7 +18,6 @@ const createPulsingDot = (color: string) => {
 };
 
 const UserIcon = createPulsingDot('bg-blue-500');
-const LocationIcon = createPulsingDot('bg-amber-500');
 
 const FALLBACK_IMAGES = [
     'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=800', // Modern Art
@@ -507,7 +506,7 @@ const Guide: React.FC = () => {
   };
 
   // --- Voice Input Logic (Hold-to-Talk) ---
-  const handleTouchStart = async (e: React.TouchEvent | React.MouseEvent) => {
+  const handleTouchStart = async () => {
     // Prevent default to avoid scrolling/selection issues on mobile
     // e.preventDefault(); // Sometimes this blocks click, handle carefully
 
@@ -810,7 +809,7 @@ const Guide: React.FC = () => {
                         subtitle: '列奥纳多·达·芬奇 · 油画',
                         description: desc,
                         tags: ['必看', '油画', '文艺复兴'],
-                        image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/640px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg'
+                        image: 'https://images.unsplash.com/photo-1580136608079-72029d0de130?auto=format&fit=crop&q=80&w=800'
                     }
                 });
             } else {

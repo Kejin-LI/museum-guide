@@ -11,7 +11,7 @@ const TravelogueDetail: React.FC = () => {
         {/* Header Image & Nav */}
       <div className="relative h-64 flex-shrink-0">
         <img 
-          src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Colosseo_2020.jpg/640px-Colosseo_2020.jpg" 
+          src="https://images.unsplash.com/photo-1552832230-c0197dd311b5?auto=format&fit=crop&q=80&w=800" 
           alt="Rome" 
           className="w-full h-full object-cover rounded-b-[2rem] shadow-md"
         />
@@ -67,7 +67,7 @@ const TravelogueDetail: React.FC = () => {
                   </div>
                   
                   <div className="rounded-xl overflow-hidden mb-3 rotate-1 border-4 border-white shadow-md">
-                     <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Colosseo_2020.jpg/640px-Colosseo_2020.jpg" alt="Colosseum" className="w-full h-40 object-cover" />
+                     <img src="https://images.unsplash.com/photo-1552832230-c0197dd311b5?auto=format&fit=crop&q=80&w=800" alt="Colosseum" className="w-full h-40 object-cover" />
                   </div>
 
                   <div className="bg-blue-50 p-3 rounded-xl mb-2 relative">
@@ -100,7 +100,7 @@ const TravelogueDetail: React.FC = () => {
                   </div>
                   
                   <div className="rounded-xl overflow-hidden mb-3 -rotate-1 border-4 border-white shadow-md">
-                     <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Trevi_Fountain%2C_Rome%2C_Italy_2_-_May_2007.jpg/640px-Trevi_Fountain%2C_Rome%2C_Italy_2_-_May_2007.jpg" alt="Fountain" className="w-full h-40 object-cover" />
+                     <img src="https://images.unsplash.com/photo-1531572753322-ad063cecc140?auto=format&fit=crop&q=80&w=800" alt="Fountain" className="w-full h-40 object-cover" />
                   </div>
 
                   <div className="bg-pink-50 p-3 rounded-xl mb-2 relative">
@@ -133,8 +133,8 @@ const TravelogueDetail: React.FC = () => {
                   </div>
                   
                   <div className="grid grid-cols-2 gap-2 mb-3">
-                     <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Rome_Spanish_Steps_May_2011.jpg/640px-Rome_Spanish_Steps_May_2011.jpg" alt="Steps" className="w-full h-24 object-cover rounded-lg rotate-2 border-2 border-white shadow-sm" />
-                     <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Gelato_in_Rome.jpg/640px-Gelato_in_Rome.jpg" alt="Gelato" className="w-full h-24 object-cover rounded-lg -rotate-2 border-2 border-white shadow-sm" />
+                     <img src="https://images.unsplash.com/photo-1525874684015-58379d421a52?auto=format&fit=crop&q=80&w=800" alt="Steps" className="w-full h-24 object-cover rounded-lg rotate-2 border-2 border-white shadow-sm" />
+                     <img src="https://images.unsplash.com/photo-1557142046-c704a3adf364?auto=format&fit=crop&q=80&w=800" alt="Gelato" className="w-full h-24 object-cover rounded-lg -rotate-2 border-2 border-white shadow-sm" />
                   </div>
                   
                   <p className="text-sm text-stone-700">
