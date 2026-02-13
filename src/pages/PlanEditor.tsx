@@ -23,6 +23,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { ArrowLeft, Clock, GripVertical, Trash2, Plus, Calendar as CalendarIcon, MapPin, Edit2, X, Save } from 'lucide-react';
+import { planService, type SavedPlan } from '../services/plan';
 
 // Interfaces
 interface Spot {
@@ -562,19 +563,38 @@ const PlanEditor: React.FC = () => {
       return `${month}月${day}日 ${weekDay}`;
   };
 
-  const handleSavePlan = () => {
-      // In a real app, this would save to backend/localStorage
-      // For now, we'll simulate saving to localStorage for the "My Plans" feature
-      const newPlan = {
+  const handleSavePlan = async () => {
+      // Get current user for UID
+      const userStr = localStorage.getItem('museum_user');
+      let uid = null;
+      if (userStr) {
+          try {
+              const user = JSON.parse(userStr);
+              uid = user.id || user.uid;
+          } catch (e) {
+              console.error("Failed to parse user for plan saving", e);
+          }
+      }
+
+      // Prepare Plan Object
+      const newPlan: SavedPlan = {
           id: Date.now().toString(),
+          uid: uid || undefined, // Associate plan with user
           title: title,
           destination: state?.destination || '未知目的地',
           days: state?.days || 0,
           startDate: startDateStr,
           image: items['day-0']?.[0]?.image || 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=400&auto=format&fit=crop',
-          status: 'upcoming' // or 'draft'
+          status: 'upcoming', // or 'draft'
+          createdAt: Date.now()
       };
 
+      // 1. Sync to Supabase if logged in
+      if (uid) {
+          await planService.savePlan(newPlan, uid);
+      }
+
+      // 2. Save to LocalStorage (as cache/fallback)
       const existingPlansStr = localStorage.getItem('my_plans');
       const existingPlans = existingPlansStr ? JSON.parse(existingPlansStr) : [];
       localStorage.setItem('my_plans', JSON.stringify([newPlan, ...existingPlans]));

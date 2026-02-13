@@ -6,7 +6,10 @@ import PlanEditor from './pages/PlanEditor';
 import Guide from './pages/Guide';
 import Community from './pages/Community';
 import Profile from './pages/Profile';
+import Auth from './pages/Auth';
+import History from './pages/History';
 import TravelogueDetail from './pages/TravelogueDetail';
+import UserContentList from './pages/UserContentList';
 
 function App() {
   return (
@@ -21,6 +24,13 @@ function App() {
         </Route>
         <Route path="/travelogue/:id" element={<TravelogueDetail />} />
         <Route path="/plan/edit" element={<PlanEditor />} />
+        <Route path="/auth" element={<Auth />} />
+        <Route path="/history" element={<History />} />
+        
+        {/* User Content Lists */}
+        <Route path="/profile/journals" element={<UserContentList />} />
+        <Route path="/profile/plans" element={<UserContentList />} />
+        <Route path="/profile/favorites" element={<UserContentList />} />
       </Routes>
     </Router>
   );

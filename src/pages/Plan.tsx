@@ -1,16 +1,67 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Sparkles, PenTool, MapPin, Compass, Calendar as CalendarIcon } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Sparkles, PenTool, MapPin, Compass, Calendar as CalendarIcon, Map, Plus } from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
+import { planService, type SavedPlan } from '../services/plan';
+import { GUEST_AVATAR } from '../services/auth';
 
 const Plan: React.FC = () => {
   const navigate = useNavigate();
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [plans, setPlans] = useState<SavedPlan[]>([]);
   const [destination, setDestination] = useState('');
   const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
   const [startDate, endDate] = dateRange;
   const [days, setDays] = useState(0);
   const [selectedPreferences, setSelectedPreferences] = useState<string[]>([]);
+
+  // Load User and Plans
+  React.useEffect(() => {
+      // 1. Load User
+      const userStr = localStorage.getItem('museum_user');
+      let uid: string | null = null;
+      if (userStr) {
+          try {
+              const user = JSON.parse(userStr);
+              uid = user.id || user.uid;
+              setCurrentUser(user);
+          } catch (e) {
+              console.error("Failed to parse user", e);
+          }
+      }
+
+      // 2. Load Plans
+      const loadPlans = async () => {
+          if (uid) {
+              // Logged In: Fetch from Supabase
+              const sbPlans = await planService.getUserPlans(uid);
+              if (sbPlans.length > 0) {
+                  setPlans(sbPlans);
+              } else {
+                  // Fallback to local storage if Supabase empty
+                  const savedPlansStr = localStorage.getItem('my_plans');
+                  if (savedPlansStr) {
+                      const allPlans: SavedPlan[] = JSON.parse(savedPlansStr);
+                      const userPlans = allPlans.filter(p => p.uid === uid);
+                      setPlans(userPlans);
+                  }
+              }
+          } else {
+              // Guest: Show NOTHING (Empty State)
+              setPlans([]);
+          }
+      };
+      
+      loadPlans();
+  }, []);
+
+  // Format date helper
+  const formatDate = (dateStr: string | null) => {
+      if (!dateStr) return '未定';
+      const date = new Date(dateStr);
+      return `${date.getFullYear()}.${date.getMonth() + 1}.${date.getDate()}`;
+  };
 
   // Calculate days whenever dates change
   React.useEffect(() => {
@@ -24,6 +75,12 @@ const Plan: React.FC = () => {
   }, [startDate, endDate]);
 
   const handleAIPlan = () => {
+    if (!currentUser) {
+        // Redirect to login if not authenticated
+        navigate('/auth');
+        return;
+    }
+
     if (!destination.trim()) {
       alert('请填写目的地');
       return;
@@ -71,13 +128,16 @@ const Plan: React.FC = () => {
                 <h1 className="text-2xl font-bold font-serif tracking-wide text-stone-900">行程规划</h1>
                 <p className="text-xs text-stone-500 mt-1">定制你的专属文化之旅</p>
             </div>
-            <div className="w-10 h-10 rounded-full bg-stone-200 overflow-hidden border-2 border-white shadow-sm">
+            <Link to="/profile" className="w-10 h-10 rounded-full bg-stone-200 overflow-hidden border-2 border-white shadow-sm active:scale-95 transition-transform block">
                 <img 
-                    src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Cat03.jpg/640px-Cat03.jpg" 
+                    src={currentUser?.avatar || GUEST_AVATAR} 
                     alt="Avatar" 
                     className="w-full h-full object-cover"
+                    onError={(e) => {
+                        (e.target as HTMLImageElement).src = GUEST_AVATAR;
+                    }}
                 />
-            </div>
+            </Link>
         </div>
       </header>
 
@@ -199,87 +259,76 @@ const Plan: React.FC = () => {
           </div>
           
           <div className="space-y-4">
-            {/* Plan Card 1 */}
-            <div className="bg-white rounded-2xl p-3 shadow-sm border border-stone-100 flex space-x-4">
-                <div className="w-24 h-24 rounded-xl bg-stone-200 overflow-hidden flex-shrink-0 relative">
-                    <img 
-                        src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f0/Kinkaku-ji_2016.jpg/640px-Kinkaku-ji_2016.jpg" 
-                        alt="Kyoto" 
-                        className="w-full h-full object-cover"
-                    />
-                     <div className="absolute top-1 left-1 bg-black/50 backdrop-blur-sm text-white text-[10px] px-1.5 py-0.5 rounded-md">
-                        5天
-                    </div>
-                </div>
-                <div className="flex-1 flex flex-col justify-between py-1">
-                    <div>
-                        <h4 className="font-bold text-stone-900 text-lg leading-tight mb-1">京都古韵五日游</h4>
-                        <div className="flex items-center text-stone-500 text-xs">
-                            <MapPin size={12} className="mr-1" />
-                            <span>日本 · 京都</span>
+            {plans.length > 0 ? (
+                plans.map(plan => (
+                    <div key={plan.id} className="bg-white rounded-2xl p-3 shadow-sm border border-stone-100 flex space-x-4">
+                        <div className="w-24 h-24 rounded-xl bg-stone-200 overflow-hidden flex-shrink-0 relative">
+                            <img 
+                                src={plan.image} 
+                                alt={plan.destination} 
+                                className={`w-full h-full object-cover ${plan.status === 'completed' ? 'grayscale' : ''}`}
+                                onError={(e) => {
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                    (e.target as HTMLImageElement).parentElement!.style.background = 'linear-gradient(135deg, #e7e5e4 0%, #d6d3d1 100%)';
+                                }}
+                            />
+                            <div className="absolute top-1 left-1 bg-black/50 backdrop-blur-sm text-white text-[10px] px-1.5 py-0.5 rounded-md">
+                                {plan.days}天
+                            </div>
+                        </div>
+                        <div className="flex-1 flex flex-col justify-between py-1">
+                            <div>
+                                <h4 className="font-bold text-stone-900 text-lg leading-tight mb-1">{plan.title}</h4>
+                                <div className="flex items-center text-stone-500 text-xs">
+                                    <MapPin size={12} className="mr-1" />
+                                    <span>{plan.destination}</span>
+                                </div>
+                            </div>
+                            <div className="flex justify-between items-end">
+                                <span className="text-xs text-stone-400 font-medium">{formatDate(plan.startDate)}</span>
+                                <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                                    plan.status === 'upcoming' ? 'bg-blue-50 text-blue-600' :
+                                    plan.status === 'completed' ? 'bg-stone-100 text-stone-500' :
+                                    'bg-amber-50 text-amber-600'
+                                }`}>
+                                    {plan.status === 'upcoming' ? '即将出行' : plan.status === 'completed' ? '已完成' : '草稿'}
+                                </span>
+                            </div>
                         </div>
                     </div>
-                    <div className="flex justify-between items-end">
-                        <span className="text-xs text-stone-400 font-medium">2023.11.15 - 2023.11.20</span>
-                        <span className="bg-blue-50 text-blue-600 text-xs px-2 py-1 rounded-full font-medium">即将出行</span>
+                ))
+            ) : (
+                <div className="bg-white rounded-2xl p-8 shadow-sm border border-stone-100 text-center flex flex-col items-center justify-center animate-in fade-in zoom-in duration-500">
+                    <div className="w-16 h-16 bg-stone-100 rounded-full flex items-center justify-center mb-4 text-stone-400">
+                        <Map size={32} strokeWidth={1.5} />
                     </div>
+                    <h3 className="text-lg font-bold text-stone-800 mb-2">
+                        {currentUser ? '暂无行程计划' : '登录开启行程'}
+                    </h3>
+                    <p className="text-stone-500 text-xs mb-6 leading-relaxed max-w-xs">
+                        {currentUser 
+                            ? '世界那么大，不想去看看吗？\n让 AI 为你定制一场说走就走的旅行。'
+                            : '登录后即可创建和同步您的专属行程，\n随时随地查看您的旅行计划。'
+                        }
+                    </p>
+                    {currentUser ? (
+                         <button 
+                            onClick={() => document.querySelector('input')?.focus()}
+                            className="px-6 py-2.5 bg-stone-900 text-white rounded-xl font-medium shadow-lg shadow-stone-900/10 hover:bg-stone-800 active:scale-95 transition-all flex items-center text-sm"
+                        >
+                            <Plus size={16} className="mr-1.5" />
+                            开启新旅程
+                        </button>
+                    ) : (
+                        <Link 
+                            to="/auth"
+                            className="px-6 py-2.5 bg-amber-600 text-white rounded-xl font-medium shadow-lg shadow-amber-900/10 hover:bg-amber-500 active:scale-95 transition-all flex items-center text-sm"
+                        >
+                            立即登录
+                        </Link>
+                    )}
                 </div>
-            </div>
-
-             {/* Plan Card 2 */}
-             <div className="bg-white rounded-2xl p-3 shadow-sm border border-stone-100 flex space-x-4 opacity-80">
-                <div className="w-24 h-24 rounded-xl bg-stone-200 overflow-hidden flex-shrink-0 relative">
-                    <img 
-                        src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/La_Tour_Eiffel_vue_de_la_Tour_Saint-Jacques%2C_Paris_ao%C3%BBt_2014_%282%29.jpg/640px-La_Tour_Eiffel_vue_de_la_Tour_Saint-Jacques%2C_Paris_ao%C3%BBt_2014_%282%29.jpg" 
-                        alt="Paris" 
-                        className="w-full h-full object-cover grayscale"
-                    />
-                     <div className="absolute top-1 left-1 bg-black/50 backdrop-blur-sm text-white text-[10px] px-1.5 py-0.5 rounded-md">
-                        7天
-                    </div>
-                </div>
-                <div className="flex-1 flex flex-col justify-between py-1">
-                    <div>
-                        <h4 className="font-bold text-stone-900 text-lg leading-tight mb-1">巴黎艺术探索之旅</h4>
-                        <div className="flex items-center text-stone-500 text-xs">
-                            <MapPin size={12} className="mr-1" />
-                            <span>法国 · 巴黎</span>
-                        </div>
-                    </div>
-                    <div className="flex justify-between items-end">
-                        <span className="text-xs text-stone-400 font-medium">2023.05.01 - 2023.05.07</span>
-                        <span className="bg-stone-100 text-stone-500 text-xs px-2 py-1 rounded-full font-medium">已完成</span>
-                    </div>
-                </div>
-            </div>
-
-            {/* Plan Card 3 */}
-            <div className="bg-white rounded-2xl p-3 shadow-sm border border-stone-100 flex space-x-4">
-                <div className="w-24 h-24 rounded-xl bg-stone-200 overflow-hidden flex-shrink-0 relative">
-                    <img 
-                        src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/Peking_forbidden_city_03.jpg/640px-Peking_forbidden_city_03.jpg" 
-                        alt="Beijing" 
-                        className="w-full h-full object-cover"
-                    />
-                     <div className="absolute top-1 left-1 bg-black/50 backdrop-blur-sm text-white text-[10px] px-1.5 py-0.5 rounded-md">
-                        3天
-                    </div>
-                </div>
-                <div className="flex-1 flex flex-col justify-between py-1">
-                    <div>
-                        <h4 className="font-bold text-stone-900 text-lg leading-tight mb-1">北京中轴线徒步</h4>
-                        <div className="flex items-center text-stone-500 text-xs">
-                            <MapPin size={12} className="mr-1" />
-                            <span>中国 · 北京</span>
-                        </div>
-                    </div>
-                    <div className="flex justify-between items-end">
-                        <span className="text-xs text-stone-400 font-medium">未定</span>
-                        <span className="bg-amber-50 text-amber-600 text-xs px-2 py-1 rounded-full font-medium">草稿</span>
-                    </div>
-                </div>
-            </div>
-
+            )}
           </div>
         </section>
       </main>
