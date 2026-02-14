@@ -184,14 +184,14 @@ const TRAVELOGUES: TravelogueItem[] = [
             {
                 time: '11:00',
                 location: '君士坦丁凯旋门',
-                image: 'https://images.unsplash.com/photo-1582296996373-c82c21966271?auto=format&fit=crop&q=80&w=800',
+                image: 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?auto=format&fit=crop&q=80&w=800',
                 content: '就在斗兽场旁边，保存得非常完好。',
                 ai_tip: '为了庆祝君士坦丁大帝统一罗马帝国而建，上面的浮雕很多是从早期建筑上拆下来的。'
             },
             {
                 time: '13:00',
                 location: '万神殿',
-                image: 'https://images.unsplash.com/photo-1548625361-9872e4235e12?auto=format&fit=crop&q=80&w=800',
+                image: 'https://images.unsplash.com/photo-1531572753322-ad063cecc140?auto=format&fit=crop&q=80&w=800',
                 content: '巨大的穹顶没有一根柱子支撑，只有顶部一个圆孔采光，光束照进来的那一刻太神圣了。',
                 ai_tip: '万神殿是古罗马建筑艺术的杰作，拉斐尔的墓就在这里。'
             },
@@ -233,27 +233,27 @@ const TRAVELOGUES: TravelogueItem[] = [
             {
                 time: '14:00',
                 location: '萨莫色雷斯的胜利女神',
-                image: 'https://images.unsplash.com/photo-1545494270-363574d30623?auto=format&fit=crop&q=80&w=800',
+                image: 'https://images.unsplash.com/photo-1478391679764-b2d8b3cd1e94?auto=format&fit=crop&q=80&w=800',
                 content: '站在楼梯尽头，仿佛真的能感觉到风吹动她的衣摆。',
                 ai_tip: '这尊雕像原本是站在船头上的，为了纪念一场海战的胜利。'
             },
             {
                 time: '15:00',
                 location: '蒙娜丽莎',
-                image: 'https://images.unsplash.com/photo-1563283997-c715566f108d?auto=format&fit=crop&q=80&w=800',
+                image: 'https://images.unsplash.com/photo-1550955295-a82f05672d61?auto=format&fit=crop&q=80&w=800',
                 content: '人太多了，只能远远看一眼。比想象中小，但那个微笑真的很神秘。',
             },
             {
                 time: '16:00',
                 location: '米洛的维纳斯',
-                image: 'https://images.unsplash.com/photo-1549247249-14571987d69b?auto=format&fit=crop&q=80&w=800',
+                image: 'https://images.unsplash.com/photo-1544211186-0610f446152a?auto=format&fit=crop&q=80&w=800',
                 content: '断臂维纳斯，黄金比例的完美身材。',
                 ai_tip: '她的手臂到底是什么姿势，至今仍是艺术史上的未解之谜。'
             },
             {
                 time: '17:30',
                 location: '拿破仑三世套房',
-                image: 'https://images.unsplash.com/photo-1590947146524-7634f1f5168e?auto=format&fit=crop&q=80&w=800',
+                image: 'https://images.unsplash.com/photo-1554593450-484196885b0d?auto=format&fit=crop&q=80&w=800',
                 content: '极尽奢华！巨大的水晶吊灯，红色的天鹅绒，完全是凡尔赛宫的感觉。',
             }
         ]
