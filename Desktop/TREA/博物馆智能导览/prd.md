@@ -622,7 +622,40 @@ graph TD
 | 行程计划编辑页（P-PLAN_EDIT） | 添加景点 | 点击 | 景点选择页（P-POI_SELECTOR） | 无 |
 
 #### 5.2.6 导览页（景点讲解）（P-GUIDE）
+<h2>欢迎加入寻迹之旅！🎉<br>Welcome to Museum Guide!</h2>
 
+<p>
+  嗨！很高兴遇见你。<br>
+  Hey there! Great to meet you.
+</p>
+
+<p>
+  您的私人 AI 导览员已经迫不及待要为您讲述那些文物背后的八卦...啊不，是历史故事了！但在我们出发之前，得先确认一下这是您本人的邮箱。<br>
+  Your personal AI guide is itching to spill the tea... I mean, tell you the fascinating history behind the artifacts! But before we start our adventure, we just need to verify it's really you.
+</p>
+
+<p style="text-align: center; margin: 30px 0;">
+  <a href="{{ .ConfirmationURL }}" 
+     style="background-color: #d97706; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
+    🚀 开启我的博物馆之旅 (Verify Email)
+  </a>
+</p>
+
+<p style="font-size: 12px; color: #666;">
+  如果这封邮件不是您申请的，那可能是某个迷糊的游客填错了地址，请无视它。<br>
+  If you didn't sign up for this, maybe a confused tourist typed the wrong address. Just ignore this email.
+</p>
+
+<hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+
+<p style="font-size: 12px; color: #999; text-align: center; line-height: 1.6;">
+  寻迹之旅 - 您口袋里的 AI 智能导览<br>
+  Museum Guide - Your AI-powered pocket companion<br>
+  <br>
+  <span style="background-color: #f3f4f6; padding: 4px 8px; border-radius: 4px; color: #6b7280; font-family: monospace;">
+    Powered by Kejin AI Lab 🧪
+  </span>
+</p>
 *   **页面名称与目的:** 导览页（景点讲解）（P-GUIDE），用户在景点现场的核心操作页面，用于触发和管理讲解。采用沉浸式全屏设计。
 *   **页面负责的核心功能:** 双重智能定位、全球地点搜索、景点/展品列表、讲解触发。
 *   **主要UI元素与布局建议:**
