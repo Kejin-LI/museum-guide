@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Sparkles, PenTool, MapPin, Compass, Calendar as CalendarIcon, Map, Plus } from 'lucide-react';
+import { Sparkles, MapPin, Compass, Calendar as CalendarIcon, Map, Plus } from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { planService, type SavedPlan } from '../services/plan';

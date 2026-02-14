@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, PenLine } from 'lucide-react';
+import { Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ArtisticBackground from '../components/ArtisticBackground';
 import { travelogueService, type TravelogueItem } from '../services/travelogue';
