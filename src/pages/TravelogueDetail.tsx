@@ -8,6 +8,21 @@ const TravelogueDetail: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const [data, setData] = useState<TravelogueItem | null>(null);
+  const [isLiked, setIsLiked] = useState(false);
+  const [currentLikes, setCurrentLikes] = useState(0);
+
+  // Load User to check if already liked (Mock: using localStorage)
+  const [uid, setUid] = useState<string | null>(null);
+
+  useEffect(() => {
+      const userStr = localStorage.getItem('museum_user');
+      if (userStr) {
+          try {
+              const user = JSON.parse(userStr);
+              setUid(user.id || user.uid);
+          } catch(e) { console.error(e); }
+      }
+  }, []);
 
   useEffect(() => {
       const loadData = async () => {
@@ -15,11 +30,68 @@ const TravelogueDetail: React.FC = () => {
               const item = await travelogueService.getById(id);
               if (item) {
                   setData(item);
+                  setCurrentLikes(item.likes);
+                  
+                  // Check if liked in localStorage mock
+                  if (uid) {
+                      const likedPosts = JSON.parse(localStorage.getItem(`liked_posts_${uid}`) || '[]');
+                      setIsLiked(likedPosts.includes(id));
+                  }
               }
           }
       };
       loadData();
-  }, [id]);
+  }, [id, uid]);
+
+  const handleLike = () => {
+      if (!uid) {
+          // If not logged in, just toggle visual state for demo
+          // In real app, redirect to auth or show toast
+          alert("请先登录");
+          return;
+      }
+
+      if (!data) return;
+
+      const likedPosts = JSON.parse(localStorage.getItem(`liked_posts_${uid}`) || '[]');
+      let newLikedPosts;
+      let newLikesCount;
+
+      if (isLiked) {
+          // Unlike
+          newLikedPosts = likedPosts.filter((p: string) => p !== id);
+          newLikesCount = currentLikes - 1;
+      } else {
+          // Like
+          newLikedPosts = [...likedPosts, id];
+          newLikesCount = currentLikes + 1;
+      }
+
+      // Update State
+      setIsLiked(!isLiked);
+      setCurrentLikes(newLikesCount);
+
+      // Persist
+      localStorage.setItem(`liked_posts_${uid}`, JSON.stringify(newLikedPosts));
+      
+      // Update global mock data (optional, for consistency if navigating back)
+      // In real app, this would be an API call
+      data.likes = newLikesCount; 
+  };
+
+  const handleShare = () => {
+      if (navigator.share) {
+          navigator.share({
+              title: data?.title,
+              text: data?.intro,
+              url: window.location.href,
+          }).catch(console.error);
+      } else {
+          // Fallback
+          navigator.clipboard.writeText(window.location.href);
+          alert('链接已复制到剪贴板');
+      }
+  };
 
   if (!data) {
       return <div className="flex justify-center items-center h-screen bg-[#FFF9F5]">加载中...</div>;
@@ -121,22 +193,33 @@ const TravelogueDetail: React.FC = () => {
       </div>
       </div>
 
-      {/* Bottom Action Bar */}
+      {/* Bottom Action Bar - Simplified for MVP */}
       <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-stone-100 px-6 py-3 flex items-center justify-between z-20 pb-safe shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
-         <div className="flex items-center space-x-1 bg-stone-50 px-3 py-2 rounded-full border border-stone-100">
-            <input type="text" placeholder="说点什么..." className="bg-transparent border-none outline-none text-sm w-32 text-stone-700 placeholder:text-stone-400" />
-         </div>
-         <div className="flex items-center space-x-6 text-stone-500">
-             <button className="flex flex-col items-center space-y-0.5">
-                 <Heart size={22} className="text-rose-400" fill="#fb7185" />
-                 <span className="text-[10px]">{data.likes}</span>
+         {/* Comment Input Removed for MVP */}
+         <div className="flex-1"></div>
+
+         <div className="flex items-center space-x-8 text-stone-500">
+             <button 
+                onClick={handleLike}
+                className="flex flex-col items-center space-y-0.5 active:scale-90 transition-transform"
+            >
+                 <Heart 
+                    size={24} 
+                    className={isLiked ? "text-rose-500" : "text-stone-400"} 
+                    fill={isLiked ? "#f43f5e" : "none"} 
+                />
+                 <span className={`text-[10px] ${isLiked ? "text-rose-500 font-bold" : ""}`}>
+                    {currentLikes}
+                 </span>
              </button>
-             <button className="flex flex-col items-center space-y-0.5">
-                 <MessageCircle size={22} />
-                 <span className="text-[10px]">56</span>
-             </button>
-             <button className="flex flex-col items-center space-y-0.5">
-                 <Share2 size={22} />
+             
+             {/* Comments Button Removed for MVP */}
+
+             <button 
+                onClick={handleShare}
+                className="flex flex-col items-center space-y-0.5 active:scale-90 transition-transform"
+            >
+                 <Share2 size={24} className="text-stone-400" />
                  <span className="text-[10px]">分享</span>
              </button>
          </div>
