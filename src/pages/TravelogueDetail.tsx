@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Heart, MessageCircle, Share2, MapPin, Sparkles } from 'lucide-react';
+import { ArrowLeft, Heart, Share2, MapPin, Sparkles } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ArtisticBackground from '../components/ArtisticBackground';
 import { travelogueService, type TravelogueItem } from '../services/travelogue';
