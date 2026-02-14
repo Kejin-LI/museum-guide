@@ -16,6 +16,7 @@ const Plan: React.FC = () => {
   const [startDate, endDate] = dateRange;
   const [days, setDays] = useState(0);
   const [selectedPreferences, setSelectedPreferences] = useState<string[]>([]);
+  const [filter, setFilter] = useState<'all' | 'upcoming'>('all');
 
   // Load User and Plans
   React.useEffect(() => {
@@ -120,6 +121,27 @@ const Plan: React.FC = () => {
     }
   };
 
+  const getFilteredPlans = () => {
+    if (!plans) return [];
+    
+    if (filter === 'all') {
+        return plans;
+    }
+    
+    // Filter for 'upcoming': Start date is in the future
+    const now = new Date();
+    // Reset time part for accurate date comparison
+    now.setHours(0, 0, 0, 0);
+    
+    return plans.filter(plan => {
+        if (!plan.startDate) return false;
+        const planDate = new Date(plan.startDate);
+        return planDate >= now;
+    });
+  };
+
+  const displayPlans = getFilteredPlans();
+
   return (
     <div className="flex flex-col h-full bg-stone-50 text-stone-800 relative overflow-hidden">
       <ArtisticBackground />
@@ -222,32 +244,18 @@ const Plan: React.FC = () => {
                 </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="grid grid-cols-2 gap-3">
-                 {/* AI Generator Button */}
-                <button 
-                    onClick={handleAIPlan}
-                    className="relative group overflow-hidden rounded-2xl h-16 flex items-center justify-center bg-stone-900 text-white shadow-lg active:scale-[0.98] transition-transform"
-                >
-                    <div className="absolute inset-0 bg-gradient-to-r from-violet-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    <div className="relative flex flex-col items-center">
-                        <div className="flex items-center font-bold">
-                            <Sparkles size={16} className="mr-1.5 text-amber-300" />
-                            AI 智能生成
-                        </div>
-                        <span className="text-[10px] text-stone-300 mt-0.5">一键生成完美行程</span>
-                    </div>
-                </button>
-
-                {/* Manual Create Button */}
-                <button className="rounded-2xl h-16 flex flex-col items-center justify-center bg-amber-50 text-amber-900 border border-amber-100 active:scale-[0.98] transition-transform">
-                    <div className="flex items-center font-bold">
-                        <PenTool size={16} className="mr-1.5" />
-                        手动创建
-                    </div>
-                    <span className="text-[10px] text-amber-700/60 mt-0.5">自由组合随心定制</span>
-                </button>
-            </div>
+            {/* Action Buttons - Simplified for MVP */}
+            <button 
+                onClick={handleAIPlan}
+                className="w-full relative group overflow-hidden rounded-2xl h-14 flex items-center justify-center bg-stone-900 text-white shadow-lg active:scale-[0.98] transition-transform"
+            >
+                <div className="absolute inset-0 bg-gradient-to-r from-violet-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div className="relative flex items-center font-bold">
+                    <Sparkles size={18} className="mr-2 text-amber-300" />
+                    AI 智能生成行程
+                </div>
+            </button>
+            {/* Manual Create Button Removed for MVP */}
         </section>
 
         {/* My Plans Section */}
@@ -255,14 +263,24 @@ const Plan: React.FC = () => {
           <div className="flex justify-between items-center mb-4">
              <h3 className="text-lg font-bold font-serif text-stone-900">我的计划</h3>
              <div className="flex space-x-4 text-sm">
-                 <button className="font-bold text-stone-900">全部</button>
-                 <button className="text-stone-400">即将出行</button>
+                 <button 
+                    onClick={() => setFilter('all')}
+                    className={`font-bold transition-colors ${filter === 'all' ? 'text-stone-900' : 'text-stone-400'}`}
+                 >
+                    全部
+                 </button>
+                 <button 
+                    onClick={() => setFilter('upcoming')}
+                    className={`font-bold transition-colors ${filter === 'upcoming' ? 'text-stone-900' : 'text-stone-400'}`}
+                 >
+                    即将出行
+                 </button>
              </div>
           </div>
           
           <div className="space-y-4">
-            {plans.length > 0 ? (
-                plans.map(plan => (
+            {displayPlans.length > 0 ? (
+                displayPlans.map(plan => (
                     <div key={plan.id} className="bg-white rounded-2xl p-3 shadow-sm border border-stone-100 flex space-x-4">
                         <div className="w-24 h-24 rounded-xl bg-stone-200 overflow-hidden flex-shrink-0 relative">
                             <img 
