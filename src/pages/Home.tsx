@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Heart, Headphones, Quote, Feather, Calendar, Plus, Map } from 'lucide-react';
 import { planService, type SavedPlan } from '../services/plan';
+import { travelogueService, type TravelogueItem } from '../services/travelogue';
 import ArtisticBackground from '../components/ArtisticBackground';
 
 const Home: React.FC = () => {
   const [plans, setPlans] = useState<SavedPlan[]>([]);
+  const [travelogues, setTravelogues] = useState<TravelogueItem[]>([]);
   const [greeting, setGreeting] = useState('早安');
 
   useEffect(() => {
@@ -64,8 +66,14 @@ const Home: React.FC = () => {
               setPlans([]);
           }
       };
+
+      const loadTravelogues = async () => {
+          const items = await travelogueService.getRecent(5);
+          setTravelogues(items);
+      };
       
       loadPlans();
+      loadTravelogues();
   }, []);
 
   // Format date helper
@@ -217,39 +225,7 @@ const Home: React.FC = () => {
           <div className="grid grid-cols-2 gap-3">
              {/* Left Column */}
              <div className="space-y-3">
-                 {/* Card 1: Kyoto */}
-                 <Link to="/travelogue/1" className="bg-white rounded-2xl overflow-hidden shadow-sm border border-stone-100 block active:scale-[0.98] transition-transform">
-                     <div className="h-32 bg-stone-200 relative">
-                         {/* Fallback Gradient if image fails */}
-                        <div className="absolute inset-0 bg-gradient-to-br from-orange-400 to-red-500 opacity-90"></div>
-                        <img 
-                            src="https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&q=80&w=600" 
-                            alt="Kyoto" 
-                            className="w-full h-full object-cover relative z-10 mix-blend-overlay opacity-80"
-                            onError={(e) => {
-                                // Fallback to a color gradient if image fails
-                                (e.target as HTMLImageElement).style.display = 'none';
-                                (e.target as HTMLImageElement).parentElement!.style.background = 'linear-gradient(135deg, #e7e5e4 0%, #d6d3d1 100%)';
-                            }}
-                        />
-                        <div className="absolute bottom-2 left-2 text-white font-serif font-bold z-20 text-lg">Kyoto</div>
-                     </div>
-                     <div className="p-3">
-                        <h4 className="font-bold text-stone-900 text-sm mb-2">京都古寺巡礼</h4>
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-1.5">
-                                <img src="https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=100" className="w-4 h-4 rounded-full" alt="Avatar"/>
-                                <span className="text-[10px] text-stone-500">林小夏</span>
-                            </div>
-                            <div className="flex items-center text-stone-400 space-x-1">
-                                <Heart size={10} />
-                                <span className="text-[10px]">128</span>
-                            </div>
-                        </div>
-                     </div>
-                 </Link>
-
-                 {/* Card 2: Quote */}
+                 {/* Card Quote - Fixed Position */}
                  <div className="bg-stone-800 rounded-2xl p-4 text-white relative overflow-hidden">
                      <Quote size={24} className="text-stone-600 mb-2" />
                      <p className="text-sm font-serif leading-relaxed mb-4 relative z-10">
@@ -260,38 +236,62 @@ const Home: React.FC = () => {
                      </div>
                      <div className="absolute -bottom-4 -right-4 w-20 h-20 bg-stone-700 rounded-full opacity-20"></div>
                  </div>
+
+                 {/* Render Left Column Travelogues (Index 1, 3) - Adjusted for balance */}
+                 {travelogues.filter((_, i) => i % 2 !== 0).map(t => (
+                    <Link key={t.id} to={`/travelogue/${t.id}`} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-stone-100 block active:scale-[0.98] transition-transform">
+                     <div className="h-32 bg-stone-200 relative">
+                        <div className="absolute inset-0 bg-gradient-to-br from-orange-400 to-red-500 opacity-0 group-hover:opacity-10 transition-opacity"></div>
+                        <img 
+                            src={t.cover} 
+                            alt={t.title} 
+                            className="w-full h-full object-cover relative z-10"
+                        />
+                     </div>
+                     <div className="p-3">
+                        <h4 className="font-bold text-stone-900 text-sm mb-2 line-clamp-2">{t.title}</h4>
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-1.5">
+                                <img src={t.avatar} className="w-4 h-4 rounded-full" alt="Avatar"/>
+                                <span className="text-[10px] text-stone-500 truncate max-w-[60px]">{t.author}</span>
+                            </div>
+                            <div className="flex items-center text-stone-400 space-x-1">
+                                <Heart size={10} />
+                                <span className="text-[10px]">{t.likes}</span>
+                            </div>
+                        </div>
+                     </div>
+                 </Link>
+                 ))}
              </div>
 
              {/* Right Column */}
              <div className="space-y-3">
-                 {/* Card 3: British Museum */}
-                 <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-stone-100 h-full flex flex-col">
-                     <div className="flex-1 bg-stone-200 min-h-[160px] relative">
+                 {/* Render Right Column Travelogues (Index 0, 2, 4) - Adjusted for balance */}
+                 {travelogues.filter((_, i) => i % 2 === 0).map(t => (
+                    <Link key={t.id} to={`/travelogue/${t.id}`} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-stone-100 h-auto flex flex-col active:scale-[0.98] transition-transform">
+                     <div className="flex-1 bg-stone-200 min-h-[120px] relative">
                         <img 
-                            src="https://images.unsplash.com/photo-1569407228235-9a744831a150?auto=format&fit=crop&q=80&w=600" 
-                            alt="British Museum" 
+                            src={t.cover} 
+                            alt={t.title} 
                             className="w-full h-full object-cover relative z-10"
-                            onError={(e) => {
-                                // Fallback to a color gradient if image fails
-                                (e.target as HTMLImageElement).style.display = 'none';
-                                (e.target as HTMLImageElement).parentElement!.style.background = 'linear-gradient(135deg, #60a5fa 0%, #2563eb 100%)';
-                            }}
                         />
                      </div>
                      <div className="p-3">
-                        <h4 className="font-bold text-stone-900 text-sm mb-2">大英博物馆一日</h4>
+                        <h4 className="font-bold text-stone-900 text-sm mb-2 line-clamp-2">{t.title}</h4>
                         <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-1.5">
-                                <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=100" className="w-4 h-4 rounded-full" alt="Avatar"/>
-                                <span className="text-[10px] text-stone-500">Mark.Z</span>
+                                <img src={t.avatar} className="w-4 h-4 rounded-full" alt="Avatar"/>
+                                <span className="text-[10px] text-stone-500 truncate max-w-[60px]">{t.author}</span>
                             </div>
                             <div className="flex items-center text-stone-400 space-x-1">
                                 <Heart size={10} />
-                                <span className="text-[10px]">89</span>
+                                <span className="text-[10px]">{t.likes}</span>
                             </div>
                         </div>
                      </div>
-                 </div>
+                 </Link>
+                 ))}
              </div>
           </div>
         </section>
