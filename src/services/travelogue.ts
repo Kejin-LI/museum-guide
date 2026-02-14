@@ -240,20 +240,20 @@ const TRAVELOGUES: TravelogueItem[] = [
             {
                 time: '15:00',
                 location: '蒙娜丽莎',
-                image: 'https://images.unsplash.com/photo-1597926591728-d3c550cb1966?auto=format&fit=crop&q=80&w=800',
+                image: 'https://images.unsplash.com/photo-1599940824399-b87987ced72a?auto=format&fit=crop&q=80&w=800',
                 content: '人太多了，只能远远看一眼。比想象中小，但那个微笑真的很神秘。',
             },
             {
                 time: '16:00',
                 location: '米洛的维纳斯',
-                image: 'https://images.unsplash.com/photo-1565060169194-1d6575a29933?auto=format&fit=crop&q=80&w=800',
+                image: 'https://images.unsplash.com/photo-1544211186-0610f446152a?auto=format&fit=crop&q=80&w=800',
                 content: '断臂维纳斯，黄金比例的完美身材。',
                 ai_tip: '她的手臂到底是什么姿势，至今仍是艺术史上的未解之谜。'
             },
             {
                 time: '17:30',
                 location: '拿破仑三世套房',
-                image: 'https://images.unsplash.com/photo-1565531770562-dd91547e60eb?auto=format&fit=crop&q=80&w=800',
+                image: 'https://images.unsplash.com/photo-1605559911160-a60e261f01c0?auto=format&fit=crop&q=80&w=800',
                 content: '极尽奢华！巨大的水晶吊灯，红色的天鹅绒，完全是凡尔赛宫的感觉。',
             }
         ]
