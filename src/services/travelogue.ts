@@ -41,20 +41,20 @@ const TRAVELOGUES: TravelogueItem[] = [
             {
                 time: '11:30',
                 location: '拉美西斯二世像',
-                image: 'https://images.unsplash.com/photo-1544211186-0610f446152a?auto=format&fit=crop&q=80&w=800',
+                image: 'https://images.unsplash.com/photo-1628498396032-687922765d78?auto=format&fit=crop&q=80&w=800',
                 content: '这位法老的雕像虽然只剩下上半身，但依然能感受到他的威严。右臂上的圆孔据说是为了方便运输而打的。',
                 ai_tip: '拉美西斯二世是古埃及最伟大的法老之一，在位长达66年。'
             },
             {
                 time: '13:00',
                 location: '阿美诺菲斯三世头像',
-                image: 'https://images.unsplash.com/photo-1572297794908-f21af097760d?auto=format&fit=crop&q=80&w=800',
+                image: 'https://images.unsplash.com/photo-1605559911160-a60e261f01c0?auto=format&fit=crop&q=80&w=800',
                 content: '巨大的花岗岩头像，嘴角带着神秘的微笑。',
             },
             {
                 time: '14:30',
                 location: '帕特农神庙石雕',
-                image: 'https://images.unsplash.com/photo-1605559911160-a60e261f01c0?auto=format&fit=crop&q=80&w=800',
+                image: 'https://images.unsplash.com/photo-1580136608260-4eb11f4b64fe?auto=format&fit=crop&q=80&w=800',
                 content: '残缺的美感。即使不在雅典卫城，这些大理石雕像依然散发着古希腊艺术的巅峰魅力。',
                 ai_tip: '注意观察衣褶的处理，那种“湿衣法”展现了极高超的雕刻技艺。',
                 color: 'blue'
@@ -90,7 +90,7 @@ const TRAVELOGUES: TravelogueItem[] = [
             {
                 time: '09:45',
                 location: '太和殿',
-                image: 'https://images.unsplash.com/photo-1584652868574-0669f4292976?auto=format&fit=crop&q=80&w=800',
+                image: 'https://images.unsplash.com/photo-1600612297714-9e783d944727?auto=format&fit=crop&q=80&w=800',
                 content: '站在广场上，看着宏伟的太和殿，真的能感受到皇权的威严。广场上的地砖据说有七层，是为了防刺客挖地道。',
                 ai_tip: '太和殿屋脊上的走兽多达10个，是现存古建筑中等级最高的。'
             },
@@ -103,7 +103,7 @@ const TRAVELOGUES: TravelogueItem[] = [
             {
                 time: '13:30',
                 location: '珍宝馆',
-                image: 'https://images.unsplash.com/photo-1598322630043-f664b0365780?auto=format&fit=crop&q=80&w=800',
+                image: 'https://images.unsplash.com/photo-1698762747657-37c22783686f?auto=format&fit=crop&q=80&w=800',
                 content: '被各种金银玉器闪瞎了眼。那个金瓯永固杯做得太精致了。',
             },
             {
@@ -150,7 +150,7 @@ const TRAVELOGUES: TravelogueItem[] = [
             {
                 time: '15:00',
                 location: '天龙寺',
-                image: 'https://images.unsplash.com/photo-1558862107-d49ef2a04d72?auto=format&fit=crop&q=80&w=800',
+                image: 'https://images.unsplash.com/photo-1626507773232-a7224266c245?auto=format&fit=crop&q=80&w=800',
                 content: '曹源池庭园借景岚山，四季景色各异。',
             },
             {
