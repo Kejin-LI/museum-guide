@@ -144,7 +144,7 @@ const TRAVELOGUES: TravelogueItem[] = [
             {
                 time: '13:30',
                 location: '岚山竹林',
-                image: 'https://images.unsplash.com/photo-1596708681729-1b3992257d0f?auto=format&fit=crop&q=80&w=800',
+                image: 'https://images.unsplash.com/photo-1528164344705-47542687000d?auto=format&fit=crop&q=80&w=800',
                 content: '漫步在翠绿的竹林小径，风吹过竹叶的声音特别治愈。',
             },
             {
