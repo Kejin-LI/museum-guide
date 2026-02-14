@@ -48,7 +48,7 @@ const TRAVELOGUES: TravelogueItem[] = [
             {
                 time: '13:00',
                 location: '阿美诺菲斯三世头像',
-                image: 'https://images.unsplash.com/photo-1605559911160-a60e261f01c0?auto=format&fit=crop&q=80&w=800',
+                image: 'https://images.unsplash.com/photo-1572297794908-f21af097760d?auto=format&fit=crop&q=80&w=800',
                 content: '巨大的花岗岩头像，嘴角带着神秘的微笑。',
             },
             {
@@ -240,13 +240,13 @@ const TRAVELOGUES: TravelogueItem[] = [
             {
                 time: '15:00',
                 location: '蒙娜丽莎',
-                image: 'https://images.unsplash.com/photo-1599940824399-b87987ced72a?auto=format&fit=crop&q=80&w=800',
+                image: 'https://images.unsplash.com/photo-1575224300306-1b8da36134ec?auto=format&fit=crop&q=80&w=800',
                 content: '人太多了，只能远远看一眼。比想象中小，但那个微笑真的很神秘。',
             },
             {
                 time: '16:00',
                 location: '米洛的维纳斯',
-                image: 'https://images.unsplash.com/photo-1544211186-0610f446152a?auto=format&fit=crop&q=80&w=800',
+                image: 'https://images.unsplash.com/photo-1549247249-14571987d69b?auto=format&fit=crop&q=80&w=800',
                 content: '断臂维纳斯，黄金比例的完美身材。',
                 ai_tip: '她的手臂到底是什么姿势，至今仍是艺术史上的未解之谜。'
             },
