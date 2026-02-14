@@ -41,20 +41,20 @@ const TRAVELOGUES: TravelogueItem[] = [
             {
                 time: '11:30',
                 location: '拉美西斯二世像',
-                image: 'https://images.unsplash.com/photo-1569407228235-9a744831a150?auto=format&fit=crop&q=80&w=800',
+                image: 'https://images.unsplash.com/photo-1544211186-0610f446152a?auto=format&fit=crop&q=80&w=800',
                 content: '这位法老的雕像虽然只剩下上半身，但依然能感受到他的威严。右臂上的圆孔据说是为了方便运输而打的。',
                 ai_tip: '拉美西斯二世是古埃及最伟大的法老之一，在位长达66年。'
             },
             {
                 time: '13:00',
                 location: '阿美诺菲斯三世头像',
-                image: 'https://images.unsplash.com/photo-1605559911160-a60e261f01c0?auto=format&fit=crop&q=80&w=800',
+                image: 'https://images.unsplash.com/photo-1544211186-0610f446152a?auto=format&fit=crop&q=80&w=800',
                 content: '巨大的花岗岩头像，嘴角带着神秘的微笑。',
             },
             {
                 time: '14:30',
                 location: '帕特农神庙石雕',
-                image: 'https://images.unsplash.com/photo-1580136608260-4eb11f4b64fe?auto=format&fit=crop&q=80&w=800',
+                image: 'https://images.unsplash.com/photo-1605559911160-a60e261f01c0?auto=format&fit=crop&q=80&w=800',
                 content: '残缺的美感。即使不在雅典卫城，这些大理石雕像依然散发着古希腊艺术的巅峰魅力。',
                 ai_tip: '注意观察衣褶的处理，那种“湿衣法”展现了极高超的雕刻技艺。',
                 color: 'blue'
@@ -62,7 +62,7 @@ const TRAVELOGUES: TravelogueItem[] = [
             {
                 time: '16:00',
                 location: '复活节岛摩艾石像',
-                image: 'https://images.unsplash.com/photo-1592388748465-8c4d3eb294c7?auto=format&fit=crop&q=80&w=800',
+                image: 'https://images.unsplash.com/photo-1516815231560-8f41ec531527?auto=format&fit=crop&q=80&w=800',
                 content: '没想到在这里也能看到“Hoa Hakananai\'a”，它的名字意思是“被偷走的朋友”。',
                 ai_tip: '这尊石像背部刻有独特的鸟人崇拜浮雕，非常罕见。'
             }
