@@ -37,7 +37,7 @@ const UserContentList: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [plans, setPlans] = useState<SavedPlan[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
+    // const [isLoading, setIsLoading] = useState(false);
     
     // Determine type based on path
     const type = location.pathname.split('/').pop(); // 'journals', 'plans', 'favorites'
@@ -45,7 +45,7 @@ const UserContentList: React.FC = () => {
     useEffect(() => {
         if (type === 'plans') {
             const loadPlans = async () => {
-                setIsLoading(true);
+                // setIsLoading(true);
                 // Get User
                 const userStr = localStorage.getItem('museum_user');
                 let uid: string | null = null;
@@ -73,7 +73,7 @@ const UserContentList: React.FC = () => {
                 } else {
                     setPlans([]);
                 }
-                setIsLoading(false);
+                // setIsLoading(false);
             };
             loadPlans();
         }

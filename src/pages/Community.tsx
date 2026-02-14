@@ -1,10 +1,13 @@
 import React from 'react';
 import { Heart, PenLine } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import ArtisticBackground from '../components/ArtisticBackground';
 
 const Community: React.FC = () => {
   return (
-    <div className="flex flex-col h-full bg-stone-50 text-stone-800">
-      <header className="px-6 py-4 flex justify-between items-center bg-white shadow-sm sticky top-0 z-10">
+    <div className="flex flex-col h-full bg-stone-50 text-stone-800 relative overflow-hidden">
+      <ArtisticBackground />
+      <header className="px-6 py-4 flex justify-between items-center bg-transparent sticky top-0 z-10 relative pt-8">
         <div className="flex space-x-4 text-sm font-medium">
             <span className="text-stone-900 border-b-2 border-stone-900 pb-1">推荐</span>
             <span className="text-stone-400">关注</span>
@@ -15,13 +18,13 @@ const Community: React.FC = () => {
         </button>
       </header>
 
-      <main className="flex-1 p-2 overflow-y-auto">
+      <main className="flex-1 p-2 overflow-y-auto relative z-10 pb-24">
         <div className="masonry-grid space-y-4">
              {/* Post Card 1 */}
-            <div className="bg-white rounded-xl overflow-hidden shadow-sm border border-stone-100 break-inside-avoid">
+            <Link to="/travelogue/1" className="bg-white rounded-xl overflow-hidden shadow-sm border border-stone-100 break-inside-avoid block active:scale-[0.99] transition-transform">
                 <div className="relative">
                      <img 
-                        src="https://images.unsplash.com/photo-1544967082-d9d3fddd85d1?q=80&w=400&auto=format&fit=crop" 
+                        src="https://images.unsplash.com/photo-1569407228235-9a744831a150?q=80&w=400&auto=format&fit=crop" 
                         alt="Post" 
                         className="w-full h-48 object-cover"
                     />
@@ -47,15 +50,26 @@ const Community: React.FC = () => {
                         </div>
                     </div>
                 </div>
-            </div>
+            </Link>
 
              {/* Post Card 2 */}
-             <div className="bg-white rounded-xl overflow-hidden shadow-sm border border-stone-100 break-inside-avoid">
+             <Link to="/travelogue/2" className="bg-white rounded-xl overflow-hidden shadow-sm border border-stone-100 break-inside-avoid block active:scale-[0.99] transition-transform">
                 <div className="p-3">
                     <h3 className="font-bold text-stone-900 text-sm mb-1 line-clamp-2">故宫的雪景真的太美了！</h3>
+                    <p className="text-xs text-stone-500 mb-2 line-clamp-3">
+                        红墙白雪，仿佛穿越回了百年前。站在景山俯瞰紫禁城全貌，那种庄严与静谧，是照片无法完全传达的。每一片雪花落下，都是历史的回响。❄️
+                    </p>
                      <div className="grid grid-cols-2 gap-1 my-2 rounded-lg overflow-hidden">
-                        <div className="bg-stone-200 h-24"></div>
-                        <div className="bg-stone-200 h-24"></div>
+                        <img 
+                            src="https://images.unsplash.com/photo-1508804185872-d7badad00f7d?q=80&w=200&auto=format&fit=crop" 
+                            className="w-full h-24 object-cover"
+                            alt="Forbidden City Snow"
+                        />
+                        <img 
+                            src="https://images.unsplash.com/photo-1599571234909-29ed5d1321d6?q=80&w=200&auto=format&fit=crop" 
+                            className="w-full h-24 object-cover"
+                            alt="Forbidden City Detail"
+                        />
                      </div>
                     <div className="flex items-center justify-between mt-2">
                         <div className="flex items-center space-x-2">
@@ -70,7 +84,7 @@ const Community: React.FC = () => {
                         </div>
                     </div>
                 </div>
-            </div>
+            </Link>
         </div>
       </main>
     </div>

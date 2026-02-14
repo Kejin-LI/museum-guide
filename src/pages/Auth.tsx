@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, ArrowRight, User, Loader2, Eye, EyeOff } from 'lucide-react';
-import { APP_NAME, APP_SLOGAN_CN, APP_SLOGAN_EN } from '../config';
+import { APP_NAME, APP_SLOGAN_CN } from '../config';
 import DustText from '../components/DustText';
 import { loginService, registerService } from '../services/auth'; // Import Service
 

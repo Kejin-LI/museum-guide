@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings, ChevronRight, BookOpen, Map, Star, Award, MessageSquare, LogOut, User, Camera } from 'lucide-react';
+import { ChevronRight, BookOpen, Map, Star, Award, MessageSquare, LogOut, Camera } from 'lucide-react';
 import { GUEST_AVATAR } from '../services/auth';
 import DustText from '../components/DustText';
+import ArtisticBackground from '../components/ArtisticBackground';
 
 interface UserProfile {
     id: string;
@@ -47,12 +48,13 @@ const Profile: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-stone-50 text-stone-800">
-      <header className="px-6 py-4 flex justify-end items-center bg-transparent">
+    <div className="flex flex-col h-full bg-stone-50 text-stone-800 relative overflow-hidden">
+      <ArtisticBackground />
+      <header className="px-6 py-4 flex justify-end items-center bg-transparent relative z-10 pt-8">
         {/* Settings button removed */}
       </header>
 
-      <main className="flex-1 overflow-y-auto px-4 pb-8">
+      <main className="flex-1 overflow-y-auto px-4 pb-8 relative z-10">
         {/* User Info */}
         <div className="flex flex-col items-center mb-8">
             <div className="relative group cursor-pointer">

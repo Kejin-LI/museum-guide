@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { History, X, Trash2, MessageSquare, ArrowLeft } from 'lucide-react';
+import { History, Trash2, MessageSquare, ArrowLeft } from 'lucide-react';
 
 interface ChatMessage {
     id: string;

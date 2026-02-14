@@ -5,6 +5,7 @@ import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { planService, type SavedPlan } from '../services/plan';
 import { GUEST_AVATAR } from '../services/auth';
+import ArtisticBackground from '../components/ArtisticBackground';
 
 const Plan: React.FC = () => {
   const navigate = useNavigate();
@@ -120,9 +121,10 @@ const Plan: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-stone-50 text-stone-800">
+    <div className="flex flex-col h-full bg-stone-50 text-stone-800 relative overflow-hidden">
+      <ArtisticBackground />
       {/* Header */}
-      <header className="px-6 pt-8 pb-4 bg-white sticky top-0 z-10">
+      <header className="px-6 pt-8 pb-4 bg-transparent sticky top-0 z-10 relative">
         <div className="flex justify-between items-start">
             <div>
                 <h1 className="text-2xl font-bold font-serif tracking-wide text-stone-900">行程规划</h1>
@@ -141,7 +143,7 @@ const Plan: React.FC = () => {
         </div>
       </header>
 
-      <main className="flex-1 px-4 py-2 overflow-y-auto pb-20">
+      <main className="flex-1 px-4 py-2 overflow-y-auto pb-20 relative z-10">
         
         {/* New Plan Input Section */}
         <section className="bg-white rounded-3xl p-5 shadow-sm border border-stone-100 mb-6">

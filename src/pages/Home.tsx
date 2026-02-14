@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, MapPin, Heart, Bell, Mic, Headphones, Quote, Feather, Calendar, Plus, Map } from 'lucide-react';
+import { MapPin, Heart, Headphones, Quote, Feather, Calendar, Plus, Map } from 'lucide-react';
 import { planService, type SavedPlan } from '../services/plan';
+import ArtisticBackground from '../components/ArtisticBackground';
 
 const Home: React.FC = () => {
   const [plans, setPlans] = useState<SavedPlan[]>([]);
   const [greeting, setGreeting] = useState('早安');
-  const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
     const updateGreeting = () => {
@@ -37,7 +37,6 @@ const Home: React.FC = () => {
           try {
               const user = JSON.parse(userStr);
               uid = user.id || user.uid;
-              setCurrentUser(user);
           } catch (e) {
               console.error("Failed to parse user", e);
           }
@@ -77,9 +76,11 @@ const Home: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-stone-50 text-stone-800">
+    <div className="flex flex-col h-full bg-stone-50 text-stone-800 relative overflow-hidden">
+      <ArtisticBackground />
+
       {/* Header */}
-      <header className="px-6 py-4 flex justify-between items-start bg-transparent sticky top-0 z-10 pt-8">
+      <header className="px-6 py-4 flex justify-between items-start bg-transparent sticky top-0 z-10 pt-8 relative">
          <div>
             <p className="text-xs text-stone-500 font-medium mb-1">{greeting}，探索者</p>
             <h1 className="text-3xl font-bold font-serif tracking-tight text-stone-900 leading-tight">
@@ -90,7 +91,7 @@ const Home: React.FC = () => {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto p-4 space-y-6 pb-24">
+      <main className="flex-1 overflow-y-auto p-4 space-y-6 pb-24 relative z-10">
         
         {/* Search Bar */}
         {/*
