@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, BookOpen, Map, Star, Award, MessageSquare, LogOut, Camera } from 'lucide-react';
-import { GUEST_AVATAR } from '../services/auth';
+import { ChevronRight, BookOpen, Map, Award, MessageSquare, LogOut, Camera, UserX } from 'lucide-react';
+import { GUEST_AVATAR, deleteAccountService } from '../services/auth';
 import DustText from '../components/DustText';
 import ArtisticBackground from '../components/ArtisticBackground';
 
@@ -12,22 +12,91 @@ interface UserProfile {
     avatar: string;
 }
 
+import { travelogueService } from '../services/travelogue';
+
+// ... (keep existing imports)
+
 const Profile: React.FC = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<UserProfile | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Stats State
+  const [stats, setStats] = useState({
+      footprints: 0,
+      journals: 0,
+      likes: 0
+  });
+
+  // Delete Confirmation Modal State
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
       const savedUser = localStorage.getItem('museum_user');
+      let uid: string | null = null;
       if (savedUser) {
-          setUser(JSON.parse(savedUser));
+          const u = JSON.parse(savedUser);
+          setUser(u);
+          uid = u.id || u.uid;
       }
+
+      // Calculate Stats
+      const calculateStats = async () => {
+          if (!uid) {
+              setStats({ footprints: 0, journals: 0, likes: 0 });
+              return;
+          }
+
+          // 1. Footprints: Count chat sessions in localStorage (key: chat_sessions_{uid})
+          // Note: In real app with Supabase, we would query count. 
+          // Here we check local storage which persists sessions.
+          // Format in Guide.tsx: localStorage.setItem(`chat_sessions_${uid}`, JSON.stringify(sessions));
+          const sessionsStr = localStorage.getItem(`chat_sessions_${uid}`);
+          const footprintsCount = sessionsStr ? JSON.parse(sessionsStr).length : 0;
+
+          // 2. Journals: Count user's travelogues
+          // Use travelogueService to get user items (handles both Supabase and Local)
+          const userTravelogues = await travelogueService.getUserTravelogues(uid);
+          const journalsCount = userTravelogues.length;
+
+          // 3. Likes: Sum of likes on user's travelogues
+          // Note: This requires fetching the latest like counts (from Supabase ideally)
+          // For now, we sum the likes from the fetched travelogues
+          const totalLikes = userTravelogues.reduce((sum, item) => sum + (item.likes || 0), 0);
+
+          setStats({
+              footprints: footprintsCount,
+              journals: journalsCount,
+              likes: totalLikes
+          });
+      };
+
+      calculateStats();
   }, []);
 
   const handleLogout = () => {
       localStorage.removeItem('museum_user');
       setUser(null);
-      navigate('/auth');
+      navigate('/auth', { replace: true });
+  };
+
+  const confirmDeleteAccount = async () => {
+      if (!user) return;
+      
+      const uid = user.id;
+      const { success, message } = await deleteAccountService(uid);
+      
+      if (success) {
+          localStorage.removeItem('museum_user');
+          localStorage.removeItem(`chat_sessions_${uid}`);
+          localStorage.removeItem(`liked_posts_${uid}`);
+          setUser(null);
+          setShowDeleteConfirm(false);
+          navigate('/auth');
+      } else {
+          alert(message || '注销失败，请重试');
+          setShowDeleteConfirm(false);
+      }
   };
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -54,7 +123,7 @@ const Profile: React.FC = () => {
         {/* Settings button removed */}
       </header>
 
-      <main className="flex-1 w-full max-w-3xl mx-auto overflow-y-auto px-4 pb-8 relative z-10">
+      <main className="flex-1 w-full max-w-3xl mx-auto overflow-y-auto px-4 pb-24 relative z-10">
         {/* User Info */}
         <div className="flex flex-col items-center mb-8">
             <div className="relative group cursor-pointer">
@@ -104,15 +173,15 @@ const Profile: React.FC = () => {
                     <p className="text-stone-500 text-sm mt-1">{user.email}</p>
                     <div className="flex space-x-6 mt-4">
                         <div className="flex flex-col items-center">
-                            <span className="font-bold text-lg text-stone-900">12</span>
+                            <span className="font-bold text-lg text-stone-900">{stats.footprints}</span>
                             <span className="text-xs text-stone-500">足迹</span>
                         </div>
                         <div className="flex flex-col items-center">
-                            <span className="font-bold text-lg text-stone-900">5</span>
+                            <span className="font-bold text-lg text-stone-900">{stats.journals}</span>
                             <span className="text-xs text-stone-500">手帐</span>
                         </div>
                         <div className="flex flex-col items-center">
-                            <span className="font-bold text-lg text-stone-900">128</span>
+                            <span className="font-bold text-lg text-stone-900">{stats.likes}</span>
                             <span className="text-xs text-stone-500">获赞</span>
                         </div>
                     </div>
@@ -174,17 +243,72 @@ const Profile: React.FC = () => {
 
 
 
-             {/* Logout Button */}
+             {/* Account Actions */}
              {user && (
-                 <button 
-                    onClick={handleLogout}
-                    className="w-full py-3 bg-white border border-stone-200 text-stone-500 rounded-xl text-sm font-medium hover:bg-stone-50 hover:text-red-500 transition-colors flex items-center justify-center"
-                 >
-                     <LogOut size={16} className="mr-2" />
-                     退出登录
-                 </button>
+                <div className="bg-white rounded-xl shadow-sm border border-stone-100 overflow-hidden mt-4 divide-y divide-stone-50">
+                    <button 
+                        onClick={handleLogout}
+                        className="w-full px-4 py-4 flex items-center space-x-3 hover:bg-stone-50 transition-colors text-left"
+                    >
+                        <div className="p-2 bg-stone-100 text-stone-600 rounded-lg">
+                            <LogOut size={18} />
+                        </div>
+                        <span className="text-sm font-medium text-stone-800">退出登录</span>
+                    </button>
+                    
+                    <button 
+                        onClick={() => setShowDeleteConfirm(true)}
+                        className="w-full px-4 py-4 flex items-center space-x-3 hover:bg-red-50 transition-colors text-left group"
+                    >
+                        <div className="p-2 bg-red-50 text-red-500 rounded-lg group-hover:bg-red-100 transition-colors">
+                            <UserX size={18} />
+                        </div>
+                        <span className="text-sm font-medium text-red-500">注销账号</span>
+                    </button>
+                </div>
              )}
         </div>
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirm && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div 
+                    className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
+                    onClick={() => setShowDeleteConfirm(false)}
+                ></div>
+                <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl transform transition-all relative z-10">
+                    <div className="p-6 text-center">
+                        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <UserX size={32} className="text-red-500" />
+                        </div>
+                        <h3 className="text-xl font-bold text-stone-900 mb-2">真的要离开吗？</h3>
+                        <p className="text-stone-600 mb-6 leading-relaxed">
+                           注销后，您精心记录的 
+                           <span className="font-bold text-amber-600 mx-1">{stats.journals} 篇手帐</span> 
+                           和 
+                           <span className="font-bold text-amber-600 mx-1">{stats.footprints} 次寻迹</span>
+                           都将化为乌有。<br/>
+                           <span className="text-sm text-stone-400 mt-2 block">我们要不...再考虑一下？🥺</span>
+                        </p>
+                        
+                        <div className="flex flex-col gap-3">
+                            <button 
+                                onClick={() => setShowDeleteConfirm(false)}
+                                className="w-full py-3 bg-stone-900 text-white rounded-xl font-medium shadow-lg hover:bg-stone-800 active:scale-[0.98] transition-all"
+                            >
+                                我再想想 (推荐)
+                            </button>
+                            <button 
+                                onClick={confirmDeleteAccount}
+                                className="w-full py-3 bg-white text-stone-400 border border-stone-200 rounded-xl font-medium hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors"
+                            >
+                                忍痛注销
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )}
       </main>
     </div>
   );

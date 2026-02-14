@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, Heart, Headphones, Quote, Feather, Calendar, Plus, Map } from 'lucide-react';
+import { MapPin, Heart, Headphones, Calendar, Plus, Map } from 'lucide-react';
 import { planService, type SavedPlan } from '../services/plan';
 import { travelogueService, type TravelogueItem } from '../services/travelogue';
 import ArtisticBackground from '../components/ArtisticBackground';
@@ -225,20 +225,8 @@ const Home: React.FC = () => {
           <div className="grid grid-cols-2 gap-3">
              {/* Left Column */}
              <div className="space-y-3">
-                 {/* Card Quote - Fixed Position */}
-                 <div className="bg-stone-800 rounded-2xl p-4 text-white relative overflow-hidden">
-                     <Quote size={24} className="text-stone-600 mb-2" />
-                     <p className="text-sm font-serif leading-relaxed mb-4 relative z-10">
-                        "历史不是尘封的记忆，而是鲜活的对话。"
-                     </p>
-                     <div className="flex justify-end">
-                        <Feather size={20} className="text-stone-600" />
-                     </div>
-                     <div className="absolute -bottom-4 -right-4 w-20 h-20 bg-stone-700 rounded-full opacity-20"></div>
-                 </div>
-
-                 {/* Render Left Column Travelogues (Index 1, 3) - Adjusted for balance */}
-                 {travelogues.filter((_, i) => i % 2 !== 0).map(t => (
+                 {/* Render Left Column Travelogues (Even Indices: 0, 2, 4...) */}
+                 {travelogues.filter((_, i) => i % 2 === 0).map(t => (
                     <Link key={t.id} to={`/travelogue/${t.id}`} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-stone-100 block active:scale-[0.98] transition-transform">
                      <div className="h-32 bg-stone-200 relative">
                         <div className="absolute inset-0 bg-gradient-to-br from-orange-400 to-red-500 opacity-0 group-hover:opacity-10 transition-opacity"></div>
@@ -267,8 +255,8 @@ const Home: React.FC = () => {
 
              {/* Right Column */}
              <div className="space-y-3">
-                 {/* Render Right Column Travelogues (Index 0, 2, 4) - Adjusted for balance */}
-                 {travelogues.filter((_, i) => i % 2 === 0).map(t => (
+                 {/* Render Right Column Travelogues (Odd Indices: 1, 3, 5...) */}
+                 {travelogues.filter((_, i) => i % 2 !== 0).map(t => (
                     <Link key={t.id} to={`/travelogue/${t.id}`} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-stone-100 h-auto flex flex-col active:scale-[0.98] transition-transform">
                      <div className="flex-1 bg-stone-200 min-h-[120px] relative">
                         <img 

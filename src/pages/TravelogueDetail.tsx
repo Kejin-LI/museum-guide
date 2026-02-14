@@ -117,7 +117,7 @@ const TravelogueDetail: React.FC = () => {
   }
 
   // Check if current user is author
-  const isAuthor = uid && (data.uid === uid || !data.uid); // For demo, if no uid on item, assume legacy/local item is ownable? 
+  // const isAuthor = uid && (data.uid === uid || !data.uid); // For demo, if no uid on item, assume legacy/local item is ownable? 
   // Actually, for "My Travelogues" derived from localstorage without uid, it's fine. 
   // But strict check: uid === data.uid. 
   // Let's allow if data.uid is missing (local) OR matches.

@@ -23,13 +23,23 @@ export const planService = {
         if (!isSupabaseConfigured) return [];
 
         try {
+            // Check if table exists by doing a lightweight query first or just handle the error
+            // Actually, we can just try to query.
             const { data, error } = await supabase
                 .from('plans')
                 .select('*')
                 .eq('user_id', userId)
                 .order('created_at', { ascending: false });
 
-            if (error) throw error;
+            if (error) {
+                // If table not found, it means we haven't set up the DB schema yet.
+                // Gracefully fallback to empty array so the UI doesn't break.
+                if (error.code === 'PGRST205' || error.message.includes('Could not find the table')) {
+                    console.warn("Supabase 'plans' table not found. Using local storage only.");
+                    return [];
+                }
+                throw error;
+            }
             if (!data) return [];
 
             return data.map(item => ({

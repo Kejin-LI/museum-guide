@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, BookOpen, Map, Star, Plus, MapPin, Trash2, Calendar, User } from 'lucide-react';
+import { ArrowLeft, BookOpen, Map, Plus, MapPin, Trash2, Calendar, Star } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { travelogueService, type TravelogueItem } from '../services/travelogue';
 import { planService, type SavedPlan } from '../services/plan';

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, ArrowRight, User, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, ArrowRight, User, Loader2, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { APP_NAME, APP_SLOGAN_CN } from '../config';
 import DustText from '../components/DustText';
-import { loginService, registerService } from '../services/auth'; // Import Service
+import { loginService, registerService, isEmailRegisteredService, isNicknameTakenService } from '../services/auth'; // Import Service
 
 const Auth: React.FC = () => {
   const navigate = useNavigate();
@@ -32,18 +32,75 @@ const Auth: React.FC = () => {
     setError('');
     setIsLoading(true);
 
-    if (!formData.email || !formData.password) {
-        setError('请填写所有必填项');
+    const email = formData.email.trim();
+    const password = formData.password;
+    const name = formData.name.trim();
+
+    const missingFields: string[] = [];
+    if (!email) missingFields.push('邮箱');
+    if (!password) missingFields.push('密码');
+    if (!isLogin && !name) missingFields.push('昵称');
+
+    if (missingFields.length > 0) {
+      setError(`请先填写完整：${missingFields.join('、')}`);
+      setIsLoading(false);
+      return;
+    }
+
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if (!emailOk) {
+      setError('邮箱格式不正确：请检查是否输入了正确的邮箱地址（例如 name@example.com）');
+      setIsLoading(false);
+      return;
+    }
+
+    if (!isLogin) {
+      if (name.length < 6) {
+        setError('昵称太短啦：至少需要 6 个字符（比如“文博小达人”）。');
         setIsLoading(false);
         return;
+      }
+
+      const hasLower = /[a-z]/.test(password);
+      const hasUpper = /[A-Z]/.test(password);
+      const hasNumber = /\d/.test(password);
+      if (password.length < 8 || !hasLower || !hasUpper || !hasNumber) {
+        setError('密码需要更“硬核”一点：至少 8 位，并且同时包含大写字母、小写字母和数字。');
+        setIsLoading(false);
+        return;
+      }
+
+      const nicknameCheck = await isNicknameTakenService(name);
+      if (!nicknameCheck.success) {
+        setError(nicknameCheck.message || '昵称校验失败，请稍后重试');
+        setIsLoading(false);
+        return;
+      }
+      if (nicknameCheck.taken) {
+        setError('这个昵称已经被别人抢先一步用了。换一个更独特的称呼再来寻迹吧～');
+        setIsLoading(false);
+        return;
+      }
+    }
+
+    let emailRegistered: boolean | undefined = undefined;
+    if (isLogin) {
+      const emailCheck = await isEmailRegisteredService(email);
+      if (emailCheck.success && emailCheck.registered === false) {
+        setIsLogin(false);
+        setError('这个邮箱还没注册，我们已经帮你切到「注册」了：给它取个昵称就能继续寻迹～');
+        setIsLoading(false);
+        return;
+      }
+      if (emailCheck.success) emailRegistered = emailCheck.registered;
     }
 
     // Call Service Layer
     let result;
     if (isLogin) {
-        result = await loginService(formData.email, formData.password);
+        result = await loginService(email, password);
     } else {
-        result = await registerService(formData.email, formData.password, formData.name);
+        result = await registerService(email, password, name);
     }
 
     setIsLoading(false);
@@ -57,9 +114,18 @@ const Auth: React.FC = () => {
         
         navigate('/profile', { replace: true });
     } else {
-        setError(result.message || (isLogin ? '登录失败' : '注册失败'));
+        if (isLogin && emailRegistered === true) {
+          setError('登录失败：这个邮箱已注册，但密码不匹配。请检查邮箱/密码是否输入正确（注意大小写与空格）。');
+        } else {
+          setError(result.message || (isLogin ? '登录失败' : '注册失败'));
+        }
     }
   };
+
+  const errorVariant: 'success' | 'info' | 'danger' =
+    error.includes('注册成功') || error.includes('验证邮件')
+      ? 'success'
+      : (error.includes('还没注册') || error.includes('切到「注册」') ? 'info' : 'danger');
 
   return (
     <div className="min-h-screen bg-stone-900 flex flex-col relative overflow-hidden w-full">
@@ -91,7 +157,7 @@ const Auth: React.FC = () => {
           />
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 animate-in slide-in-from-bottom-8 duration-700 delay-200">
+        <form noValidate onSubmit={handleSubmit} className="space-y-4 animate-in slide-in-from-bottom-8 duration-700 delay-200">
           {!isLogin && (
             <div className="space-y-1">
               <label className="text-xs font-medium text-stone-400 ml-1">昵称</label>
@@ -99,7 +165,7 @@ const Auth: React.FC = () => {
                 <User className="absolute left-4 top-3.5 text-stone-500" size={18} />
                 <input 
                   type="text" 
-                  placeholder="您的称呼"
+                  placeholder="您的称呼（至少 6 个字符）"
                   value={formData.name}
                   onChange={e => setFormData({...formData, name: e.target.value})}
                   className="w-full bg-stone-800/50 border border-stone-700 rounded-xl py-3 pl-11 pr-4 text-white placeholder-stone-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all backdrop-blur-sm"
@@ -128,7 +194,7 @@ const Auth: React.FC = () => {
               <Lock className="absolute left-4 top-3.5 text-stone-500" size={18} />
               <input 
                 type={showPassword ? "text" : "password"}
-                placeholder="••••••••"
+                placeholder={isLogin ? "••••••••" : "至少 8 位，含大小写字母 + 数字"}
                 value={formData.password}
                 onChange={e => setFormData({...formData, password: e.target.value})}
                 className="w-full bg-stone-800/50 border border-stone-700 rounded-xl py-3 pl-11 pr-12 text-white placeholder-stone-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all backdrop-blur-sm"
@@ -144,8 +210,31 @@ const Auth: React.FC = () => {
           </div>
 
           {error && (
-            <div className="text-red-400 text-xs px-1 animate-in fade-in">
-              {error}
+            <div
+              className={[
+                'rounded-xl px-3 py-2 border backdrop-blur-sm flex items-start gap-2 animate-in fade-in',
+                errorVariant === 'success'
+                  ? 'bg-emerald-500/10 border-emerald-500/15 text-emerald-100'
+                  : errorVariant === 'info'
+                    ? 'bg-amber-500/10 border-amber-500/15 text-amber-100'
+                    : 'bg-rose-500/10 border-rose-500/15 text-rose-100',
+              ].join(' ')}
+              role="status"
+              aria-live="polite"
+            >
+              <AlertCircle
+                size={16}
+                className={
+                  errorVariant === 'success'
+                    ? 'text-emerald-400 mt-0.5'
+                    : errorVariant === 'info'
+                      ? 'text-amber-400 mt-0.5'
+                      : 'text-rose-400 mt-0.5'
+                }
+              />
+              <div className="text-xs leading-relaxed">
+                {error}
+              </div>
             </div>
           )}
 

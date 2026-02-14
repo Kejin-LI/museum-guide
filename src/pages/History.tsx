@@ -50,22 +50,20 @@ const HistoryPage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-stone-50 text-stone-800 w-full">
+    <div className="flex flex-col h-screen bg-stone-50 text-stone-800 w-full shadow-xl">
       {/* Header */}
-      <div className="p-4 bg-white border-b border-stone-100 flex items-center shadow-sm sticky top-0 z-10 justify-center">
-          <div className="w-full max-w-3xl flex items-center">
+      <header className="px-6 py-4 flex items-center bg-white border-b border-stone-100 sticky top-0 z-10">
           <button 
               onClick={() => navigate(-1)} 
               className="p-2 -ml-2 text-stone-600 hover:bg-stone-100 rounded-full transition-colors"
           >
               <ArrowLeft size={20} />
           </button>
-          <h1 className="text-lg font-bold text-stone-900 ml-2 flex items-center">
+          <h1 className="text-lg font-bold font-serif text-stone-900 ml-2 flex items-center">
               <History size={20} className="mr-2 text-amber-500" />
               历史寻迹
           </h1>
-          </div>
-      </div>
+      </header>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4 flex flex-col items-center">

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import Home from './pages/Home';
@@ -10,8 +11,29 @@ import Auth from './pages/Auth';
 import History from './pages/History';
 import TravelogueDetail from './pages/TravelogueDetail';
 import UserContentList from './pages/UserContentList';
+import { GUEST_AVATAR } from './services/auth';
 
 function App() {
+  // Fix for problematic avatar URL in localStorage
+  useEffect(() => {
+    try {
+      const userStr = localStorage.getItem('museum_user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        // Check for the specific problematic URL or any similar pattern if needed
+        if (user.avatar && user.avatar.includes('photo-1604580864964')) {
+          user.avatar = GUEST_AVATAR;
+          localStorage.setItem('museum_user', JSON.stringify(user));
+          console.log('Fixed user avatar in localStorage');
+          // Force reload to apply changes if needed, but state update should happen on next render/nav
+          window.location.reload(); 
+        }
+      }
+    } catch (e) {
+      console.error('Error fixing local storage:', e);
+    }
+  }, []);
+
   return (
     <Router>
       <Routes>

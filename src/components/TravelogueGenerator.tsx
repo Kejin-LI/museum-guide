@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { X, Check, Sparkles, Image as ImageIcon, Calendar, MapPin } from 'lucide-react';
+import { X, Check, Sparkles, Image as ImageIcon } from 'lucide-react';
 import type { ChatMessage } from '../services/chat';
 import type { TravelogueItem } from '../services/travelogue';
 
@@ -29,7 +29,6 @@ export const TravelogueGenerator: React.FC<TravelogueGeneratorProps> = ({
     user,
     onGenerate
 }) => {
-    const [step, setStep] = useState<'select' | 'preview'>('select');
     const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
     const [isGenerating, setIsGenerating] = useState(false);
 
@@ -59,7 +58,6 @@ export const TravelogueGenerator: React.FC<TravelogueGeneratorProps> = ({
             const initialSelection = new Set<string>();
             allImages.slice(0, 30).forEach(img => initialSelection.add(img.url));
             setSelectedImages(initialSelection);
-            setStep('select');
         }
     }, [isOpen, allImages]);
 
