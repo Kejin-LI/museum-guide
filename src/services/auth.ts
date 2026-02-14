@@ -16,7 +16,7 @@ interface AuthResponse {
 }
 
 // 默认头像列表（古希腊神话人物与风景）
-export const GUEST_AVATAR = "https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?auto=format&fit=crop&q=80&w=200"; // 油画风人物
+export const GUEST_AVATAR = "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"; // 默认访客头像 - 更加积极开朗
 
 const DEFAULT_AVATARS = [
     'https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?auto=format&fit=crop&q=80&w=200', // Renaissance Portrait
@@ -24,7 +24,7 @@ const DEFAULT_AVATARS = [
     'https://images.unsplash.com/photo-1549289524-1e85c7b6c299?auto=format&fit=crop&q=80&w=200', // Classical Male Statue
     'https://images.unsplash.com/photo-1555992336-fb9d29493b13?auto=format&fit=crop&q=80&w=200', // Acropolis/Parthenon
     'https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&q=80&w=200', // Santorini Blue Dome
-    'https://images.unsplash.com/photo-1604580864964-c8d03b3068e2?auto=format&fit=crop&q=80&w=200', // Ancient Columns
+    // Removed problematic URL
     'https://images.unsplash.com/photo-1548013146-72479768bada?auto=format&fit=crop&q=80&w=200', // Greek Vase/Art
     'https://images.unsplash.com/photo-1599707367072-cd6ad663325d?auto=format&fit=crop&q=80&w=200', // Bust of Homer/Philosopher
     'https://images.unsplash.com/photo-1576504677634-06b2130bd1f3?auto=format&fit=crop&q=80&w=200', // Classical Sculpture
