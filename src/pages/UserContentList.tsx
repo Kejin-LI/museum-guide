@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, BookOpen, Map, Star, Plus, MapPin } from 'lucide-react';
+import { ArrowLeft, BookOpen, Map, Star, Plus, MapPin, Trash2, Calendar, User } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { travelogueService, type TravelogueItem } from '../services/travelogue';
 import { planService, type SavedPlan } from '../services/plan';
 
 type EmptyStateProps = {
@@ -37,27 +38,30 @@ const UserContentList: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [plans, setPlans] = useState<SavedPlan[]>([]);
+    const [journals, setJournals] = useState<TravelogueItem[]>([]);
     // const [isLoading, setIsLoading] = useState(false);
     
     // Determine type based on path
     const type = location.pathname.split('/').pop(); // 'journals', 'plans', 'favorites'
 
     useEffect(() => {
+        // Common User Loading Logic
+        const loadUser = () => {
+            const userStr = localStorage.getItem('museum_user');
+            if (userStr) {
+                try {
+                    const user = JSON.parse(userStr);
+                    return user.id || user.uid;
+                } catch (e) {
+                    console.error("Failed to parse user", e);
+                }
+            }
+            return null;
+        };
+        const uid = loadUser();
+
         if (type === 'plans') {
             const loadPlans = async () => {
-                // setIsLoading(true);
-                // Get User
-                const userStr = localStorage.getItem('museum_user');
-                let uid: string | null = null;
-                if (userStr) {
-                    try {
-                        const user = JSON.parse(userStr);
-                        uid = user.id || user.uid;
-                    } catch (e) {
-                        console.error("Failed to parse user", e);
-                    }
-                }
-
                 if (uid) {
                     const sbPlans = await planService.getUserPlans(uid);
                     if (sbPlans.length > 0) {
@@ -73,9 +77,26 @@ const UserContentList: React.FC = () => {
                 } else {
                     setPlans([]);
                 }
-                // setIsLoading(false);
             };
             loadPlans();
+        } else if (type === 'journals') {
+            const loadJournals = async () => {
+                if (uid) {
+                    const myJournals = await travelogueService.getUserTravelogues(uid);
+                    setJournals(myJournals);
+                } else {
+                    // For guests, maybe show what they just created in session? 
+                    // Or just empty if strictly "My" requires auth.
+                    // Requirement says "My Travelogues", usually implies logged in.
+                    // But if we used localStorage fallback in service, let's try to load from there for guest too?
+                    // The service currently assumes userTravelogues in localstorage are mixed.
+                    // If we want to support guest local storage, we can fetch all and filter by "no uid" or just show all local ones.
+                    // For now, let's just use what service returns. Service getUserTravelogues requires UID.
+                    // If no UID, maybe we should show empty or prompt login.
+                    setJournals([]);
+                }
+            };
+            loadJournals();
         }
     }, [type]);
     
@@ -86,6 +107,14 @@ const UserContentList: React.FC = () => {
         emptyDesc: '这里空空如也',
         actionText: '去创作',
         onAction: () => navigate('/')
+    };
+
+    const handleDeleteJournal = async (e: React.MouseEvent, id: string) => {
+        e.stopPropagation();
+        if (confirm('确定要删除这篇手帐吗？')) {
+            await travelogueService.delete(id);
+            setJournals(prev => prev.filter(j => j.id !== id));
+        }
     };
 
     if (type === 'journals') {
@@ -106,19 +135,10 @@ const UserContentList: React.FC = () => {
             actionText: '创建新计划',
             onAction: () => navigate('/plan')
         };
-    } else if (type === 'favorites') {
-        config = {
-            title: '我的收藏',
-            emptyIcon: <Star size={48} strokeWidth={1.5} />,
-            emptyTitle: '收藏夹比脸还干净',
-            emptyDesc: '遇到喜欢的博物馆或展品别犹豫。\n收藏是为了更好的重逢。',
-            actionText: '去探索',
-            onAction: () => navigate('/community')
-        };
     }
 
     return (
-        <div className="flex flex-col h-screen bg-stone-50 text-stone-800 max-w-md mx-auto w-full shadow-xl">
+        <div className="flex flex-col h-screen bg-stone-50 text-stone-800 w-full shadow-xl">
             {/* Header */}
             <header className="px-6 py-4 flex items-center bg-white border-b border-stone-100 sticky top-0 z-10">
                 <button 
@@ -130,8 +150,54 @@ const UserContentList: React.FC = () => {
                 <h1 className="text-lg font-bold font-serif text-stone-900 ml-2">{config.title}</h1>
             </header>
 
-            <main className="flex-1 overflow-y-auto">
-                {type === 'plans' && plans.length > 0 ? (
+            <main className="flex-1 overflow-y-auto flex flex-col items-center">
+                <div className="w-full max-w-3xl flex-1">
+                {type === 'journals' && journals.length > 0 ? (
+                    <div className="p-4 space-y-4">
+                        {journals.map(journal => (
+                            <div 
+                                key={journal.id} 
+                                onClick={() => navigate(`/travelogue/${journal.id}`)}
+                                className="bg-white rounded-2xl p-3 shadow-sm border border-stone-100 flex space-x-4 active:scale-[0.99] transition-transform relative group"
+                            >
+                                <div className="w-24 h-24 rounded-xl bg-stone-200 overflow-hidden flex-shrink-0 relative">
+                                    <img 
+                                        src={journal.cover} 
+                                        alt={journal.title} 
+                                        className="w-full h-full object-cover"
+                                    />
+                                    {journal.is_public && (
+                                        <div className="absolute top-1 left-1 bg-black/50 backdrop-blur-sm text-white text-[10px] px-1.5 py-0.5 rounded-md">
+                                            已发布
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="flex-1 flex flex-col justify-between py-1 min-w-0">
+                                    <div>
+                                        <h4 className="font-bold text-stone-900 text-base leading-tight mb-1 line-clamp-2">{journal.title}</h4>
+                                        <div className="flex items-center text-stone-500 text-xs mt-1">
+                                            <MapPin size={12} className="mr-1 flex-shrink-0" />
+                                            <span className="truncate">{journal.location}</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-between items-end mt-2">
+                                        <span className="text-xs text-stone-400 font-medium flex items-center">
+                                            <Calendar size={12} className="mr-1" />
+                                            {journal.date}
+                                        </span>
+                                        
+                                        <button 
+                                            onClick={(e) => handleDeleteJournal(e, journal.id)}
+                                            className="p-1.5 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : type === 'plans' && plans.length > 0 ? (
                     <div className="p-4 space-y-4">
                         {plans.map(plan => (
                             <div key={plan.id} className="bg-white rounded-2xl p-3 shadow-sm border border-stone-100 flex space-x-4 active:scale-[0.99] transition-transform">
@@ -182,6 +248,7 @@ const UserContentList: React.FC = () => {
                         onAction={config.onAction}
                     />
                 )}
+                </div>
             </main>
         </div>
     );

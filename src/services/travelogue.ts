@@ -1,5 +1,8 @@
+import { supabase } from '../lib/supabase';
+
 export interface TravelogueItem {
     id: string;
+    uid?: string; // Author User ID
     title: string;
     location: string;
     author: string;
@@ -8,6 +11,8 @@ export interface TravelogueItem {
     intro: string;
     cover: string;
     likes: number;
+    is_public?: boolean;
+    created_at?: string;
     timeline: {
         time: string;
         location: string;
@@ -261,17 +266,59 @@ const TRAVELOGUES: TravelogueItem[] = [
 ];
 
 export const travelogueService = {
+    // Fetch all travelogues (for community/feed)
     getAll: async (): Promise<TravelogueItem[]> => {
-        // Mock async delay
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                // Sort by date descending (Newest first)
-                const sorted = [...TRAVELOGUES].sort((a, b) => 
-                    new Date(b.date).getTime() - new Date(a.date).getTime()
-                );
-                resolve(sorted);
-            }, 100); 
-        });
+        try {
+            // Fetch public travelogues from Supabase
+            const { data, error } = await supabase
+                .from('travelogues')
+                .select('*')
+                .eq('is_public', true)
+                .order('date', { ascending: false });
+
+            if (!error && data) {
+                // Merge Supabase data with Static data
+                // Note: In a real app, you might just want Supabase data + Pagination
+                // For this demo, we mix them.
+                return [...data, ...TRAVELOGUES];
+            }
+        } catch (e) {
+            console.error("Failed to fetch from Supabase", e);
+        }
+
+        // Fallback to static + local
+        const stored = localStorage.getItem('user_travelogues');
+        const userTravelogues: TravelogueItem[] = stored ? JSON.parse(stored) : [];
+        return [...userTravelogues, ...TRAVELOGUES].sort((a, b) => 
+            new Date(b.date).getTime() - new Date(a.date).getTime()
+        );
+    },
+
+    // Fetch user's own travelogues
+    getUserTravelogues: async (uid: string): Promise<TravelogueItem[]> => {
+        try {
+            const { data, error } = await supabase
+                .from('travelogues')
+                .select('*')
+                .eq('uid', uid)
+                .order('created_at', { ascending: false }); // Sort by creation time desc
+
+            if (!error && data) {
+                return data;
+            }
+        } catch (e) {
+            console.error("Failed to fetch user travelogues", e);
+        }
+
+        // Fallback to local storage filtering
+        const stored = localStorage.getItem('user_travelogues');
+        if (stored) {
+            const all: TravelogueItem[] = JSON.parse(stored);
+            return all.filter(t => t.uid === uid).sort((a, b) => 
+                 new Date(b.date).getTime() - new Date(a.date).getTime()
+            );
+        }
+        return [];
     },
 
     getRecent: async (limit: number = 5): Promise<TravelogueItem[]> => {
@@ -280,10 +327,128 @@ export const travelogueService = {
     },
 
     getById: async (id: string): Promise<TravelogueItem | undefined> => {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                resolve(TRAVELOGUES.find(t => t.id === id));
-            }, 50);
-        });
+        // Try Supabase first
+        try {
+            const { data, error } = await supabase
+                .from('travelogues')
+                .select('*')
+                .eq('id', id)
+                .single();
+            
+            if (!error && data) {
+                return data;
+            }
+        } catch (e) {
+            // ignore
+        }
+
+        // Fallback to memory/local
+        const all = await travelogueService.getAll();
+        return all.find(t => t.id === id);
+    },
+
+    add: async (item: TravelogueItem): Promise<void> => {
+        // 1. Save to Supabase if user is logged in (has uid)
+        if (item.uid) {
+            try {
+                const { error } = await supabase
+                    .from('travelogues')
+                    .insert([{
+                        id: item.id,
+                        uid: item.uid,
+                        title: item.title,
+                        location: item.location,
+                        author: item.author,
+                        avatar: item.avatar,
+                        date: item.date,
+                        intro: item.intro,
+                        cover: item.cover,
+                        likes: item.likes || 0,
+                        timeline: item.timeline,
+                        is_public: item.is_public || false,
+                        created_at: new Date().toISOString()
+                    }]);
+                
+                if (error) console.error("Supabase insert error", error);
+            } catch (e) {
+                console.error("Supabase error", e);
+            }
+        }
+
+        // 2. Always save to LocalStorage as backup/cache
+        const stored = localStorage.getItem('user_travelogues');
+        const userTravelogues: TravelogueItem[] = stored ? JSON.parse(stored) : [];
+        userTravelogues.unshift(item);
+        localStorage.setItem('user_travelogues', JSON.stringify(userTravelogues));
+    },
+
+    update: async (item: TravelogueItem): Promise<void> => {
+        if (item.uid) {
+            try {
+                await supabase
+                    .from('travelogues')
+                    .update({
+                        title: item.title,
+                        intro: item.intro,
+                        cover: item.cover,
+                        timeline: item.timeline,
+                        is_public: item.is_public
+                    })
+                    .eq('id', item.id);
+            } catch (e) {
+                console.error("Update failed", e);
+            }
+        }
+        
+        // Update LocalStorage
+        const stored = localStorage.getItem('user_travelogues');
+        if (stored) {
+            const list: TravelogueItem[] = JSON.parse(stored);
+            const idx = list.findIndex(t => t.id === item.id);
+            if (idx >= 0) {
+                list[idx] = item;
+                localStorage.setItem('user_travelogues', JSON.stringify(list));
+            }
+        }
+    },
+
+    delete: async (id: string): Promise<void> => {
+        try {
+            await supabase
+                .from('travelogues')
+                .delete()
+                .eq('id', id);
+        } catch (e) {
+            console.error("Delete failed", e);
+        }
+
+        // LocalStorage
+        const stored = localStorage.getItem('user_travelogues');
+        if (stored) {
+            const list: TravelogueItem[] = JSON.parse(stored);
+            const newList = list.filter(t => t.id !== id);
+            localStorage.setItem('user_travelogues', JSON.stringify(newList));
+        }
+    },
+
+    publish: async (id: string, isPublic: boolean): Promise<void> => {
+        try {
+            await supabase
+                .from('travelogues')
+                .update({ is_public: isPublic })
+                .eq('id', id);
+        } catch (e) {
+             console.error("Publish failed", e);
+        }
+         // LocalStorage update
+         const stored = localStorage.getItem('user_travelogues');
+         if (stored) {
+             const list: TravelogueItem[] = JSON.parse(stored);
+             const item = list.find(t => t.id === id);
+             if (item) {
+                 item.is_public = isPublic;
+                 localStorage.setItem('user_travelogues', JSON.stringify(list));
+             }
+         }
     }
 };

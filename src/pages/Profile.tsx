@@ -48,13 +48,13 @@ const Profile: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-stone-50 text-stone-800 relative overflow-hidden">
+    <div className="flex flex-col h-screen w-full bg-stone-50 text-stone-800 relative overflow-hidden">
       <ArtisticBackground />
-      <header className="px-6 py-4 flex justify-end items-center bg-transparent relative z-10 pt-8">
+      <header className="w-full max-w-3xl mx-auto px-6 py-4 flex justify-end items-center bg-transparent relative z-10 pt-8">
         {/* Settings button removed */}
       </header>
 
-      <main className="flex-1 overflow-y-auto px-4 pb-8 relative z-10">
+      <main className="flex-1 w-full max-w-3xl mx-auto overflow-y-auto px-4 pb-8 relative z-10">
         {/* User Info */}
         <div className="flex flex-col items-center mb-8">
             <div className="relative group cursor-pointer">
@@ -158,18 +158,6 @@ const Profile: React.FC = () => {
                     </div>
                     <ChevronRight size={16} className="text-stone-400" />
                 </button>
-                 <button 
-                    onClick={() => navigate('/profile/favorites')}
-                    className="w-full px-4 py-4 flex items-center justify-between hover:bg-stone-50 transition-colors border-b border-stone-50"
-                 >
-                    <div className="flex items-center space-x-3">
-                        <div className="p-2 bg-amber-50 text-amber-600 rounded-lg">
-                            <Star size={18} />
-                        </div>
-                        <span className="text-sm font-medium text-stone-800">我的收藏</span>
-                    </div>
-                    <ChevronRight size={16} className="text-stone-400" />
-                </button>
                 <button 
                     onClick={() => navigate('/history')}
                     className="w-full px-4 py-4 flex items-center justify-between hover:bg-stone-50 transition-colors"
@@ -178,7 +166,7 @@ const Profile: React.FC = () => {
                         <div className="p-2 bg-green-50 text-green-600 rounded-lg">
                             <MessageSquare size={18} />
                         </div>
-                        <span className="text-sm font-medium text-stone-800">历史对话</span>
+                        <span className="text-sm font-medium text-stone-800">历史寻迹</span>
                     </div>
                     <ChevronRight size={16} className="text-stone-400" />
                 </button>

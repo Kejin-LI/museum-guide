@@ -84,11 +84,11 @@ const Home: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-stone-50 text-stone-800 relative overflow-hidden">
+    <div className="flex flex-col h-screen w-full bg-stone-50 text-stone-800 relative overflow-hidden">
       <ArtisticBackground />
 
       {/* Header */}
-      <header className="px-6 py-4 flex justify-between items-start bg-transparent sticky top-0 z-10 pt-8 relative">
+      <header className="w-full max-w-3xl mx-auto px-6 py-4 flex justify-between items-start bg-transparent sticky top-0 z-10 pt-8 relative">
          <div>
             <p className="text-xs text-stone-500 font-medium mb-1">{greeting}，探索者</p>
             <h1 className="text-3xl font-bold font-serif tracking-tight text-stone-900 leading-tight">
@@ -99,7 +99,7 @@ const Home: React.FC = () => {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto p-4 space-y-6 pb-24 relative z-10">
+      <main className="flex-1 w-full max-w-3xl mx-auto overflow-y-auto p-4 space-y-6 pb-24 relative z-10">
         
         {/* Search Bar */}
         {/*

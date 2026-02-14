@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Sparkles, MapPin, Compass, Calendar as CalendarIcon, Map, Plus } from 'lucide-react';
-import DatePicker from 'react-datepicker';
+import DatePicker, { registerLocale } from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
+import { zhCN } from 'date-fns/locale';
 import { planService, type SavedPlan } from '../services/plan';
+
+registerLocale('zh-CN', zhCN);
 import { GUEST_AVATAR } from '../services/auth';
 import ArtisticBackground from '../components/ArtisticBackground';
 
@@ -15,7 +18,6 @@ const Plan: React.FC = () => {
   const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
   const [startDate, endDate] = dateRange;
   const [days, setDays] = useState(0);
-  const [selectedPreferences, setSelectedPreferences] = useState<string[]>([]);
   const [filter, setFilter] = useState<'all' | 'upcoming'>('all');
 
   // Load User and Plans
@@ -91,34 +93,15 @@ const Plan: React.FC = () => {
       alert('请选择出行日期范围');
       return;
     }
-    if (selectedPreferences.length === 0) {
-      alert('请至少选择一个旅行偏好');
-      return;
-    }
     
     navigate('/plan/edit', { 
         state: { 
             destination, 
             days, 
-            preferences: selectedPreferences,
+            preferences: [],
             startDate: startDate ? startDate.toISOString() : null,
         } 
     });
-  };
-
-  const PREFERENCES = [
-    { id: 'history', label: '历史文化', icon: '🏛️' },
-    { id: 'art', label: '艺术展览', icon: '🎨' },
-    { id: 'nature', label: '自然风光', icon: '🌲' },
-    { id: 'family', label: '亲子友好', icon: '👨‍👩‍👧‍👦' },
-  ];
-
-  const togglePreference = (label: string) => {
-    if (selectedPreferences.includes(label)) {
-      setSelectedPreferences(selectedPreferences.filter(p => p !== label));
-    } else {
-      setSelectedPreferences([...selectedPreferences, label]);
-    }
   };
 
   const getFilteredPlans = () => {
@@ -143,10 +126,10 @@ const Plan: React.FC = () => {
   const displayPlans = getFilteredPlans();
 
   return (
-    <div className="flex flex-col h-full bg-stone-50 text-stone-800 relative overflow-hidden">
+    <div className="flex flex-col h-screen w-full bg-stone-50 text-stone-800 relative overflow-hidden">
       <ArtisticBackground />
       {/* Header */}
-      <header className="px-6 pt-8 pb-4 bg-transparent sticky top-0 z-10 relative">
+      <header className="w-full max-w-3xl mx-auto px-6 pt-8 pb-4 bg-transparent sticky top-0 z-10 relative">
         <div className="flex justify-between items-start">
             <div>
                 <h1 className="text-2xl font-bold font-serif tracking-wide text-stone-900">行程规划</h1>
@@ -165,7 +148,8 @@ const Plan: React.FC = () => {
         </div>
       </header>
 
-      <main className="flex-1 px-4 py-2 overflow-y-auto pb-20 relative z-10">
+      <main className="flex-1 px-4 py-2 overflow-y-auto pb-20 relative z-10 flex flex-col items-center">
+        <div className="w-full max-w-3xl">
         
         {/* New Plan Input Section */}
         <section className="bg-white rounded-3xl p-5 shadow-sm border border-stone-100 mb-6">
@@ -204,6 +188,8 @@ const Plan: React.FC = () => {
                             onChange={(update) => {
                                 setDateRange(update);
                             }}
+                            locale="zh-CN"
+                            withPortal
                             placeholderText="选择出发和结束日期"
                             className="w-full bg-white rounded-xl border border-stone-200 pl-10 pr-4 py-3 text-sm text-stone-700 focus:ring-2 focus:ring-amber-200 focus:outline-none shadow-sm font-medium"
                             wrapperClassName="w-full"
@@ -223,26 +209,7 @@ const Plan: React.FC = () => {
                 </div>
             </div>
 
-            {/* Preferences */}
-            <div className="mb-6">
-                <label className="block text-xs font-bold text-stone-500 mb-1.5 uppercase tracking-wider">旅行偏好 (多选)</label>
-                <div className="flex flex-wrap gap-2">
-                    {PREFERENCES.map((pref) => (
-                        <button
-                            key={pref.id}
-                            onClick={() => togglePreference(pref.label)}
-                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center border ${
-                                selectedPreferences.includes(pref.label)
-                                ? 'bg-amber-100 text-amber-800 border-amber-200'
-                                : 'bg-stone-50 text-stone-600 border-transparent hover:bg-stone-100'
-                            }`}
-                        >
-                            <span className="mr-1.5">{pref.icon}</span>
-                            {pref.label}
-                        </button>
-                    ))}
-                </div>
-            </div>
+            {/* Preferences Section Removed for MVP */}
 
             {/* Action Buttons - Simplified for MVP */}
             <button 
@@ -351,7 +318,8 @@ const Plan: React.FC = () => {
             )}
           </div>
         </section>
-      </main>
+      </div>
+    </main>
     </div>
   );
 };

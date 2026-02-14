@@ -2,10 +2,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Camera, Mic, Play, X, Plus, MessageCircle, Send, Map, ChevronDown, Compass, MapPin, Search, Loader2, Globe, Volume2, StopCircle, Keyboard, History, Trash2, MessageSquarePlus, Lock } from 'lucide-react';
+import { Camera, Mic, Play, X, Plus, MessageCircle, Send, Map, ChevronDown, Compass, MapPin, Search, Loader2, Globe, Volume2, StopCircle, Keyboard, History, Trash2, MessageSquarePlus, Lock, BookOpen, MoreHorizontal } from 'lucide-react';
 import L from 'leaflet';
 
 import { chatService, type ChatSession, type ChatMessage } from '../services/chat';
+import { TravelogueGenerator } from '../components/TravelogueGenerator';
+import { travelogueService, type TravelogueItem } from '../services/travelogue';
 
 // Create a custom pulsing dot icon using DivIcon
 const createPulsingDot = (color: string) => {
@@ -266,6 +268,8 @@ const Guide: React.FC = () => {
   const [showPersonaSelector, setShowPersonaSelector] = useState(false);
   const [isChatHidden, setIsChatHidden] = useState(false);
   const [showLimitModal, setShowLimitModal] = useState(false);
+  const [showGenerator, setShowGenerator] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
 
   // Auth & Usage State
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -1092,8 +1096,14 @@ const Guide: React.FC = () => {
       }
   };
 
+  const handleTravelogueGenerated = async (item: TravelogueItem) => {
+      await travelogueService.add(item);
+      // Navigate to the newly created travelogue
+      navigate(`/travelogue/${item.id}`);
+  };
+
   return (
-    <div className="flex flex-col h-full bg-stone-50 text-stone-800 relative overflow-hidden">
+    <div className="flex flex-col h-screen w-full bg-stone-50 text-stone-800 relative overflow-hidden">
       
       {/* Locating Overlay */}
       {step === 'locating' && (
@@ -1341,7 +1351,7 @@ const Guide: React.FC = () => {
       {step === 'agent-chat' && (
           <button 
               onClick={() => setIsChatHidden(!isChatHidden)}
-              className="absolute bottom-24 right-4 z-[600] w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center text-stone-600 hover:text-amber-500 hover:bg-stone-50 transition-all active:scale-95 border border-stone-100"
+              className="absolute bottom-40 right-4 z-[600] w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center text-stone-600 hover:text-amber-500 hover:bg-stone-50 transition-all active:scale-95 border border-stone-100"
           >
               {isChatHidden ? <MessageCircle size={24} /> : <Map size={24} />}
           </button>
@@ -1349,7 +1359,7 @@ const Guide: React.FC = () => {
 
       {/* Top Context Bar - Only show when in chat mode */}
       {step === 'agent-chat' && currentLocation && (
-      <div className={`absolute top-0 left-0 right-0 px-4 pt-12 pb-4 z-[500] pointer-events-none animate-in slide-in-from-top-4 duration-500 flex gap-2 transition-transform duration-500 ${isChatHidden ? '-translate-y-full' : 'translate-y-0'}`}>
+      <div className={`absolute top-0 left-0 right-0 w-full max-w-3xl mx-auto px-4 pt-12 pb-4 z-[500] pointer-events-none animate-in slide-in-from-top-4 duration-500 flex gap-2 transition-transform duration-500 ${isChatHidden ? '-translate-y-full' : 'translate-y-0'}`}>
         
         {/* Location Selector (Left Aligned, Full Width) */}
         <button 
@@ -1374,22 +1384,60 @@ const Guide: React.FC = () => {
         </button>
 
         {/* Action Buttons Group (Right Aligned) */}
-        <div className="flex gap-2">
-            {/* New Chat Button */}
+        <div className="flex gap-2 relative">
+            {/* Menu Button */}
             <button 
-               onClick={handleNewSession}
-               className="w-10 h-10 bg-white/90 backdrop-blur-md rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.08)] border border-white/60 pointer-events-auto flex items-center justify-center active:scale-95 transition-all text-stone-600 hover:text-green-600 z-30"
+               onClick={() => setShowMenu(!showMenu)}
+               className={`w-10 h-10 bg-white/90 backdrop-blur-md rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.08)] border border-white/60 pointer-events-auto flex items-center justify-center active:scale-95 transition-all z-30 ${showMenu ? 'text-amber-600 bg-amber-50' : 'text-stone-600'}`}
             >
-               <MessageSquarePlus size={18} />
+               <MoreHorizontal size={20} />
             </button>
 
-            {/* History Button - Minimal Circle */}
-            <button 
-               onClick={() => setShowHistory(true)}
-               className="w-10 h-10 bg-white/90 backdrop-blur-md rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.08)] border border-white/60 pointer-events-auto flex items-center justify-center active:scale-95 transition-all text-stone-600 hover:text-amber-600 z-30"
-            >
-               <History size={18} />
-            </button>
+            {/* Menu Dropdown */}
+            {showMenu && (
+                <div className="absolute top-12 right-0 w-48 bg-white rounded-2xl shadow-xl border border-stone-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200 pointer-events-auto z-40">
+                    <div className="p-1.5 space-y-1">
+                            <button 
+                               onClick={() => { setShowGenerator(true); setShowMenu(false); }}
+                               className="w-full flex items-center px-3 py-2.5 rounded-xl hover:bg-stone-50 text-left transition-colors group"
+                            >
+                                <div className="w-8 h-8 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center mr-3 group-hover:bg-purple-100 transition-colors">
+                                    <BookOpen size={16} />
+                                </div>
+                                <div>
+                                    <div className="text-sm font-bold text-stone-800">生成AI手帐</div>
+                                    <div className="text-[10px] text-stone-400">总结今日游览</div>
+                                </div>
+                            </button>
+
+                            <button 
+                               onClick={() => { handleNewSession(); setShowMenu(false); }}
+                               className="w-full flex items-center px-3 py-2.5 rounded-xl hover:bg-stone-50 text-left transition-colors group"
+                            >
+                                <div className="w-8 h-8 rounded-full bg-green-50 text-green-600 flex items-center justify-center mr-3 group-hover:bg-green-100 transition-colors">
+                                    <MessageSquarePlus size={16} />
+                                </div>
+                                <div>
+                                    <div className="text-sm font-bold text-stone-800">新对话</div>
+                                    <div className="text-[10px] text-stone-400">开始新的话题</div>
+                                </div>
+                            </button>
+
+                            <button 
+                               onClick={() => { setShowHistory(true); setShowMenu(false); }}
+                               className="w-full flex items-center px-3 py-2.5 rounded-xl hover:bg-stone-50 text-left transition-colors group"
+                            >
+                                <div className="w-8 h-8 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mr-3 group-hover:bg-amber-100 transition-colors">
+                                    <History size={16} />
+                                </div>
+                                <div>
+                                    <div className="text-sm font-bold text-stone-800">历史寻迹</div>
+                                    <div className="text-[10px] text-stone-400">查看过往对话</div>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+            )}
 
             {/* Close/Back Button - Minimal Circle */}
             <button 
@@ -1569,7 +1617,7 @@ const Guide: React.FC = () => {
 
       {/* Main Chat Interface */}
       {step === 'agent-chat' && (
-      <div className={`flex flex-col h-full z-[450] pt-32 pb-safe pointer-events-none transition-all duration-500 ${isChatHidden ? 'opacity-0 translate-y-20' : 'opacity-100 translate-y-0'}`}>
+      <div className={`flex flex-col h-full w-full max-w-3xl mx-auto z-[450] pt-32 pb-safe pointer-events-none transition-all duration-500 ${isChatHidden ? 'opacity-0 translate-y-20' : 'opacity-100 translate-y-0'}`}>
         
         {/* Messages Area - Enable pointer events for scrolling/interaction */}
         <div className="flex-1 overflow-y-auto px-4 space-y-6 pb-4 pointer-events-auto">
@@ -1787,7 +1835,7 @@ const Guide: React.FC = () => {
                   <div className="p-4 border-b border-stone-100 flex justify-between items-center bg-stone-50">
                       <h3 className="font-bold text-lg text-stone-800 flex items-center">
                           <History size={20} className="mr-2 text-amber-500" />
-                          历史对话
+                          历史寻迹
                       </h3>
                       <button onClick={() => setShowHistory(false)} className="p-2 hover:bg-stone-200 rounded-full">
                           <X size={20} className="text-stone-500" />
@@ -1835,6 +1883,22 @@ const Guide: React.FC = () => {
               <div className="absolute inset-0 -z-10" onClick={() => setShowHistory(false)}></div>
           </div>
       )}
+
+      {/* Menu Backdrop */}
+      {showMenu && (
+          <div className="absolute inset-0 z-[499]" onClick={() => setShowMenu(false)}></div>
+      )}
+
+      {/* Travelogue Generator */}
+      <TravelogueGenerator 
+          isOpen={showGenerator}
+          onClose={() => setShowGenerator(false)}
+          messages={messages}
+          location={currentLocation}
+          persona={guidePersona}
+          user={currentUser}
+          onGenerate={handleTravelogueGenerated}
+      />
 
     </div>
   );

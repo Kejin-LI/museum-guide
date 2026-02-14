@@ -50,9 +50,10 @@ const HistoryPage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-stone-50 text-stone-800 max-w-md mx-auto w-full">
+    <div className="flex flex-col h-screen bg-stone-50 text-stone-800 w-full">
       {/* Header */}
-      <div className="p-4 bg-white border-b border-stone-100 flex items-center shadow-sm sticky top-0 z-10">
+      <div className="p-4 bg-white border-b border-stone-100 flex items-center shadow-sm sticky top-0 z-10 justify-center">
+          <div className="w-full max-w-3xl flex items-center">
           <button 
               onClick={() => navigate(-1)} 
               className="p-2 -ml-2 text-stone-600 hover:bg-stone-100 rounded-full transition-colors"
@@ -61,14 +62,16 @@ const HistoryPage: React.FC = () => {
           </button>
           <h1 className="text-lg font-bold text-stone-900 ml-2 flex items-center">
               <History size={20} className="mr-2 text-amber-500" />
-              历史对话
+              历史寻迹
           </h1>
+          </div>
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div className="flex-1 overflow-y-auto p-4 flex flex-col items-center">
+          <div className="w-full max-w-3xl flex-1 flex flex-col">
           {sessions.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-stone-400">
+              <div className="flex-1 flex flex-col items-center justify-center text-stone-400">
                   <div className="w-16 h-16 bg-stone-200 rounded-full flex items-center justify-center mb-4 text-stone-400">
                       <MessageSquare size={32} />
                   </div>
@@ -77,11 +80,12 @@ const HistoryPage: React.FC = () => {
                       onClick={() => navigate('/guide')}
                       className="mt-6 px-6 py-2 bg-stone-900 text-white rounded-full text-sm font-medium hover:bg-stone-800 transition-colors"
                   >
-                      去开启一段新对话
+                      去开启一段新旅程
                   </button>
               </div>
           ) : (
-              sessions.map(session => (
+              <div className="space-y-3">
+              {sessions.map(session => (
                   <div 
                       key={session.id}
                       onClick={() => handleSwitchSession(session)}
@@ -115,8 +119,10 @@ const HistoryPage: React.FC = () => {
                           <Trash2 size={16} />
                       </button>
                   </div>
-              ))
-          )}
+              ))}
+                </div>
+            )}
+            </div>
       </div>
     </div>
   );

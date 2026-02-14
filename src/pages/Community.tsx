@@ -24,7 +24,7 @@ const Community: React.FC = () => {
       </header>
 
       <main className="flex-1 p-2 overflow-y-auto relative z-10 pb-24">
-        <div className="masonry-grid space-y-4">
+        <div className="columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4">
              {travelogues.map((t) => (
                 <Link key={t.id} to={`/travelogue/${t.id}`} className="bg-white rounded-xl overflow-hidden shadow-sm border border-stone-100 break-inside-avoid block active:scale-[0.99] transition-transform">
                     <div className="relative">

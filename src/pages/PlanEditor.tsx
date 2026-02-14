@@ -604,9 +604,9 @@ const PlanEditor: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-stone-50 text-stone-800">
+    <div className="flex flex-col h-screen bg-stone-50 text-stone-800">
       {/* Header */}
-      <header className="px-4 py-4 bg-white sticky top-0 z-20 border-b border-stone-100 flex items-center justify-between shadow-sm">
+      <header className="w-full max-w-3xl mx-auto px-4 py-4 bg-white sticky top-0 z-20 border-b border-stone-100 flex items-center justify-between shadow-sm">
         <button 
           onClick={handleBack}
           className="w-10 h-10 rounded-full bg-stone-50 flex items-center justify-center text-stone-600 active:scale-95 transition-transform"
@@ -628,7 +628,7 @@ const PlanEditor: React.FC = () => {
         </button>
       </header>
 
-      <main className="flex-1 px-4 py-6 overflow-y-auto pb-20">
+      <main className="flex-1 w-full max-w-3xl mx-auto px-4 py-6 overflow-y-auto pb-20">
         <DndContext 
           sensors={sensors}
           collisionDetection={closestCorners}
