@@ -120,9 +120,9 @@ const Home: React.FC = () => {
           {/* Guide Card (Primary) */}
           <Link to="/guide" className="bg-[#1C1C1E] p-5 rounded-[2rem] shadow-lg flex flex-col justify-between h-44 active:scale-[0.98] transition-transform relative overflow-hidden group">
             {/* Decorative Background */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-[#2C2C2E] rounded-full blur-2xl opacity-40 -translate-y-1/2 translate-x-1/4 pointer-events-none"></div>
-            <div className="absolute -bottom-8 -right-8 w-48 h-48 bg-[#2C2C2E] rounded-full blur-2xl opacity-60 pointer-events-none"></div>
-            <div className="absolute bottom-4 right-4 w-24 h-24 bg-[#3A3A3C] rounded-full blur-xl opacity-30 pointer-events-none"></div>
+            <div className="absolute top-10 right-10 w-28 h-28 bg-[#2C2C2E] rounded-full blur-2xl opacity-35 pointer-events-none"></div>
+            <div className="absolute bottom-10 right-8 w-40 h-40 bg-[#2C2C2E] rounded-full blur-2xl opacity-45 pointer-events-none"></div>
+            <div className="absolute bottom-6 left-8 w-24 h-24 bg-[#3A3A3C] rounded-full blur-xl opacity-25 pointer-events-none"></div>
 
             <div className="w-12 h-12 bg-[#3A3A3C] rounded-full flex items-center justify-center text-[#D4B996] mb-2 relative z-10 shadow-sm">
               <Headphones size={24} className="opacity-90" />
