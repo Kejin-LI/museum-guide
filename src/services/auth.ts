@@ -19,16 +19,15 @@ interface AuthResponse {
 export const GUEST_AVATAR = "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"; // 默认访客头像 - 更加积极开朗
 
 const DEFAULT_AVATARS = [
-    'https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?auto=format&fit=crop&q=80&w=200', // Renaissance Portrait
-    'https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?auto=format&fit=crop&q=80&w=200', // Friendly Goddess (Athena?)
-    'https://images.unsplash.com/photo-1549289524-1e85c7b6c299?auto=format&fit=crop&q=80&w=200', // Classical Male Statue
-    'https://images.unsplash.com/photo-1555992336-fb9d29493b13?auto=format&fit=crop&q=80&w=200', // Acropolis/Parthenon
-    'https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&q=80&w=200', // Santorini Blue Dome
-    // Removed problematic URL
-    'https://images.unsplash.com/photo-1548013146-72479768bada?auto=format&fit=crop&q=80&w=200', // Greek Vase/Art
-    'https://images.unsplash.com/photo-1599707367072-cd6ad663325d?auto=format&fit=crop&q=80&w=200', // Bust of Homer/Philosopher
-    'https://images.unsplash.com/photo-1576504677634-06b2130bd1f3?auto=format&fit=crop&q=80&w=200', // Classical Sculpture
-    'https://images.unsplash.com/photo-1525641855721-6f4963066356?auto=format&fit=crop&q=80&w=200', // Greek Landscape/Ruins
+    'https://api.dicebear.com/7.x/avataaars/svg?seed=Athena', 
+    'https://api.dicebear.com/7.x/avataaars/svg?seed=Odysseus',
+    'https://api.dicebear.com/7.x/avataaars/svg?seed=Hermes',
+    'https://api.dicebear.com/7.x/avataaars/svg?seed=Apollo',
+    'https://api.dicebear.com/7.x/avataaars/svg?seed=Artemis',
+    'https://api.dicebear.com/7.x/avataaars/svg?seed=Hera',
+    'https://api.dicebear.com/7.x/avataaars/svg?seed=Dionysus',
+    'https://api.dicebear.com/7.x/avataaars/svg?seed=Muse',
+    'https://api.dicebear.com/7.x/avataaars/svg?seed=Pegasus',
 ];
 
 /**
@@ -71,6 +70,13 @@ const toZhAuthErrorMessage = (rawMessage: string, mode: 'login' | 'register' | '
 
     if (lower.includes('rate limit') || lower.includes('too many')) {
         return '操作太频繁了：请稍等片刻再试。';
+    }
+
+    if (lower.includes('otp') || lower.includes('token')) {
+        if (lower.includes('expired') || lower.includes('invalid')) {
+            return '验证码已过期或不正确：请重新发送验证码再试。';
+        }
+        return '验证码校验失败：请检查验证码是否正确，或重新发送。';
     }
 
     if (lower.includes('failed to fetch') || lower.includes('network')) {
@@ -199,6 +205,107 @@ export const isNicknameTakenService = async (name: string): Promise<{ success: b
     } catch (e) {
         console.error('Supabase isNicknameTaken Error:', e);
         return { success: false, message: '昵称校验服务异常' };
+    }
+};
+
+export const sendEmailCodeService = async (email: string): Promise<{ success: boolean; message?: string }> => {
+    const isSupabaseConfigured = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_URL.includes('supabase');
+
+    if (!isSupabaseConfigured) {
+        return { success: false, message: '当前环境未配置 Supabase，无法发送验证码。' };
+    }
+
+    try {
+        const { error } = await supabase.auth.signInWithOtp({
+            email,
+            options: {
+                shouldCreateUser: true,
+            },
+        });
+
+        if (error) {
+            return { success: false, message: toZhAuthErrorMessage(error.message, 'register') };
+        }
+
+        return { success: true, message: '验证码已发送：请去邮箱查看 6 位验证码（有效期通常较短）。' };
+    } catch (e) {
+        console.error('Supabase Send Email Code Error:', e);
+        return { success: false, message: '验证码发送失败，请稍后重试。' };
+    }
+};
+
+export const sendPasswordResetEmailService = async (email: string): Promise<{ success: boolean; message?: string }> => {
+    const isSupabaseConfigured = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_URL.includes('supabase');
+    if (!isSupabaseConfigured) {
+        return { success: false, message: '当前环境未配置 Supabase，无法发送重置邮件。' };
+    }
+
+    try {
+        const redirectTo = `${window.location.origin}${window.location.pathname}?reset=1#/reset-password`;
+        const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+        if (error) return { success: false, message: toZhAuthErrorMessage(error.message, 'login') };
+        return { success: true, message: '重置邮件已发送：请去邮箱打开链接，回来设置新密码。' };
+    } catch (e) {
+        console.error('Supabase Password Reset Email Error:', e);
+        return { success: false, message: '重置邮件发送失败，请稍后重试。' };
+    }
+};
+
+export const registerWithEmailCodeService = async (
+    email: string,
+    password: string,
+    name: string,
+    code: string
+): Promise<AuthResponse> => {
+    const isSupabaseConfigured = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_URL.includes('supabase');
+
+    if (!isSupabaseConfigured) {
+        return { success: false, message: '当前环境未配置 Supabase，无法使用验证码注册。' };
+    }
+
+    try {
+        const verify = await supabase.auth.verifyOtp({
+            email,
+            token: code,
+            type: 'email',
+        });
+
+        if (verify.error) {
+            return { success: false, message: toZhAuthErrorMessage(verify.error.message, 'register') };
+        }
+
+        const updated = await supabase.auth.updateUser({
+            password,
+            data: {
+                name,
+                avatar_url: getRandomAvatar(),
+            },
+        });
+
+        if (updated.error) {
+            return { success: false, message: toZhAuthErrorMessage(updated.error.message, 'register') };
+        }
+
+        const session = verify.data.session;
+        const user = verify.data.user || updated.data.user;
+
+        if (!user || !session) {
+            return { success: false, message: '注册成功但会话初始化失败，请返回登录再试一次。' };
+        }
+
+        return {
+            success: true,
+            data: {
+                id: user.id,
+                name: (user.user_metadata as any)?.name || name || email.split('@')[0],
+                email: user.email || email,
+                avatar: (user.user_metadata as any)?.avatar_url || getRandomAvatar(),
+                token: session.access_token,
+            },
+        };
+    } catch (e) {
+        console.error('Supabase Register With Email Code Error:', e);
+        return { success: false, message: '注册服务异常' };
     }
 };
 

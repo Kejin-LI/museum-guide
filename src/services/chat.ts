@@ -48,7 +48,12 @@ export const chatService = {
                 .eq('user_id', userId)
                 .order('updated_at', { ascending: false });
 
-            if (sessionsError) throw sessionsError;
+            if (sessionsError) {
+                if (sessionsError.code === 'PGRST205' || sessionsError.message?.includes("Could not find the table")) {
+                    return [];
+                }
+                throw sessionsError;
+            }
             if (!sessionsData) return [];
 
             // 2. Fetch Messages for these sessions (could be optimized)
@@ -67,7 +72,9 @@ export const chatService = {
                     .eq('session_id', s.id)
                     .order('created_at', { ascending: true });
                 
-                if (msgsError) console.error("Error fetching messages for session", s.id, msgsError);
+                if (msgsError && !(msgsError.code === 'PGRST205' || msgsError.message?.includes("Could not find the table"))) {
+                    console.error("Error fetching messages for session", s.id, msgsError);
+                }
 
                 sessions.push({
                     id: s.id,

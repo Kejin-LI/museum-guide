@@ -4,6 +4,8 @@ import { ChevronRight, BookOpen, Map, Award, MessageSquare, LogOut, Camera, User
 import { GUEST_AVATAR, deleteAccountService } from '../services/auth';
 import DustText from '../components/DustText';
 import ArtisticBackground from '../components/ArtisticBackground';
+import { supabase } from '../lib/supabase';
+import { planService, type SavedPlan } from '../services/plan';
 
 interface UserProfile {
     id: string;
@@ -47,12 +49,22 @@ const Profile: React.FC = () => {
               return;
           }
 
-          // 1. Footprints: Count chat sessions in localStorage (key: chat_sessions_{uid})
-          // Note: In real app with Supabase, we would query count. 
-          // Here we check local storage which persists sessions.
-          // Format in Guide.tsx: localStorage.setItem(`chat_sessions_${uid}`, JSON.stringify(sessions));
-          const sessionsStr = localStorage.getItem(`chat_sessions_${uid}`);
-          const footprintsCount = sessionsStr ? JSON.parse(sessionsStr).length : 0;
+          let footprintsCount = 0;
+          try {
+              const sbPlans = await planService.getUserPlans(uid);
+              if (sbPlans.length > 0) {
+                  footprintsCount = sbPlans.length;
+              } else {
+                  const savedPlansStr = localStorage.getItem('my_plans');
+                  if (savedPlansStr) {
+                      const allPlans: SavedPlan[] = JSON.parse(savedPlansStr);
+                      const userPlans = allPlans.filter(p => p.uid === uid);
+                      footprintsCount = userPlans.length;
+                  }
+              }
+          } catch {
+              footprintsCount = 0;
+          }
 
           // 2. Journals: Count user's travelogues
           // Use travelogueService to get user items (handles both Supabase and Local)
@@ -74,7 +86,8 @@ const Profile: React.FC = () => {
       calculateStats();
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+      await supabase.auth.signOut();
       localStorage.removeItem('museum_user');
       setUser(null);
       navigate('/auth', { replace: true });
@@ -87,6 +100,7 @@ const Profile: React.FC = () => {
       const { success, message } = await deleteAccountService(uid);
       
       if (success) {
+          await supabase.auth.signOut();
           localStorage.removeItem('museum_user');
           localStorage.removeItem(`chat_sessions_${uid}`);
           localStorage.removeItem(`liked_posts_${uid}`);

@@ -54,7 +54,7 @@ const HistoryPage: React.FC = () => {
       {/* Header */}
       <header className="px-6 py-4 flex items-center bg-white border-b border-stone-100 sticky top-0 z-10">
           <button 
-              onClick={() => navigate(-1)} 
+              onClick={() => navigate('/profile', { replace: true })} 
               className="p-2 -ml-2 text-stone-600 hover:bg-stone-100 rounded-full transition-colors"
           >
               <ArrowLeft size={20} />

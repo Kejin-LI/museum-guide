@@ -8,6 +8,7 @@ import L from 'leaflet';
 import { chatService, type ChatSession, type ChatMessage } from '../services/chat';
 import { TravelogueGenerator } from '../components/TravelogueGenerator';
 import { travelogueService, type TravelogueItem } from '../services/travelogue';
+import { guideAgentService } from '../services/guideAgent';
 
 // Create a custom pulsing dot icon using DivIcon
 const createPulsingDot = (color: string) => {
@@ -21,37 +22,71 @@ const createPulsingDot = (color: string) => {
 
 const UserIcon = createPulsingDot('bg-blue-500');
 
-const FALLBACK_IMAGES = [
-    'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=800', // Modern Art
-    'https://images.unsplash.com/photo-1518998053901-5348d3969105?auto=format&fit=crop&q=80&w=800', // Gallery
-    'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?auto=format&fit=crop&q=80&w=800', // Ancient
-    'https://images.unsplash.com/photo-1599661046289-e31897846e41?auto=format&fit=crop&q=80&w=800', // Chinese
-    'https://images.unsplash.com/photo-1545063328-c8e3fafa16f9?auto=format&fit=crop&q=80&w=800', // Red Walls
-    'https://images.unsplash.com/photo-1499856871940-a09e3f92f49e?auto=format&fit=crop&q=80&w=800', // Greek
-    'https://images.unsplash.com/photo-1554907984-15263bf06302?auto=format&fit=crop&q=80&w=800', // Library
-    'https://images.unsplash.com/photo-1572953109213-3be62398eb95?auto=format&fit=crop&q=80&w=800', // Sculpture
-    'https://images.unsplash.com/photo-1565060169689-5f2b2e143c68?auto=format&fit=crop&q=80&w=800', // Asian Architecture
-    'https://images.unsplash.com/photo-1548625361-e87c692a4048?auto=format&fit=crop&q=80&w=800', // Museum Hall
-    'https://images.unsplash.com/photo-1544967082-d9d25d867d66?auto=format&fit=crop&q=80&w=800', // Historic Building
-    'https://images.unsplash.com/photo-1569407228235-9a744831a150?auto=format&fit=crop&q=80&w=800', // Columns
-    'https://images.unsplash.com/photo-1597921366472-35a746564619?auto=format&fit=crop&q=80&w=800', // Louvre style
-    'https://images.unsplash.com/photo-1550950346-60882e379475?auto=format&fit=crop&q=80&w=800', // British Museum style
-    'https://images.unsplash.com/photo-1524397057410-1e775ed476f3?auto=format&fit=crop&q=80&w=800', // Met style
-    'https://images.unsplash.com/photo-1514905552197-0610a4d8fd73?auto=format&fit=crop&q=80&w=800', // Exhibition
+const PLACEHOLDER_PALETTES = [
+    { bg1: '#0f172a', bg2: '#1f2937', accent: '#d97706' },
+    { bg1: '#111827', bg2: '#0f766e', accent: '#f59e0b' },
+    { bg1: '#1f2937', bg2: '#312e81', accent: '#f97316' },
+    { bg1: '#0b1324', bg2: '#3b1d2a', accent: '#f59e0b' },
+];
+
+const hashString = (input: string) => {
+    let hash = 0;
+    for (let i = 0; i < input.length; i++) {
+        hash = input.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return hash;
+};
+
+const svgToDataUri = (svg: string) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+
+const getCoverPlaceholder = (title: string) => {
+    const safeTitle = (title || 'Museum').trim();
+    const hash = hashString(safeTitle);
+    const palette = PLACEHOLDER_PALETTES[Math.abs(hash) % PLACEHOLDER_PALETTES.length];
+    const subtitle = 'Odyssey · 寻迹之旅';
+    const svg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="720" viewBox="0 0 1080 720">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="${palette.bg1}"/>
+      <stop offset="1" stop-color="${palette.bg2}"/>
+    </linearGradient>
+  </defs>
+  <rect width="1080" height="720" fill="url(#g)"/>
+  <circle cx="900" cy="160" r="180" fill="${palette.accent}" opacity="0.12"/>
+  <circle cx="160" cy="620" r="220" fill="${palette.accent}" opacity="0.10"/>
+  <rect x="72" y="520" width="936" height="136" rx="22" fill="#0b1220" opacity="0.55"/>
+  <text x="108" y="585" fill="#ffffff" font-size="54" font-family="ui-serif, Georgia, serif" font-weight="700">${safeTitle.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text>
+  <text x="108" y="630" fill="#e5e7eb" font-size="26" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif" opacity="0.9">${subtitle}</text>
+</svg>`;
+    return svgToDataUri(svg);
+};
+
+const fetchJsonWithTimeout = async <T,>(url: string, timeoutMs: number): Promise<T> => {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        const res = await fetch(url, { signal: controller.signal, headers: { Accept: 'application/json' } });
+        const contentType = res.headers.get('content-type') || '';
+        if (!res.ok || !contentType.includes('application/json')) {
+            throw new Error('Bad response');
+        }
+        return (await res.json()) as T;
+    } finally {
+        window.clearTimeout(timeoutId);
+    }
+};
+
+const MAP_TILE_URLS = [
+    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    'https://{s}.tile.openstreetmap.de/{z}/{x}/{y}.png',
+    'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
 ];
 
 // Helper to get a deterministic mock image based on string hash
 const getMockImageForLocation = (id: string, name: string): string => {
-    // Simple string hash
-    let hash = 0;
-    const combined = id + name;
-    for (let i = 0; i < combined.length; i++) {
-        hash = combined.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    
-    // Use hash to pick from FALLBACK_IMAGES
-    const index = Math.abs(hash) % FALLBACK_IMAGES.length;
-    return FALLBACK_IMAGES[index];
+    const combined = `${id}:${name}`;
+    return getCoverPlaceholder(combined);
 };
 
 // Image helper component with fallback
@@ -102,7 +137,7 @@ const MOCK_LOCATIONS: Record<string, LocationContext> = {
         name: '卢浮宫',
         area: '德农馆 1F · 意大利绘画厅',
         weather: '晴 24°C',
-        coverImage: 'https://image.pollinations.ai/prompt/Louvre%20Museum%20pyramid%20Paris%20sunset%20architecture?width=1080&height=720&nologo=true&seed=101',
+        coverImage: getMockImageForLocation('louvre', '卢浮宫'),
         recommendations: ['带我去看蒙娜丽莎', '附近的洗手间', '达芬奇还有哪些画？'],
         coordinates: [48.8606, 2.3376], // Paris
     },
@@ -111,7 +146,7 @@ const MOCK_LOCATIONS: Record<string, LocationContext> = {
         name: '故宫博物院',
         area: '太和殿广场',
         weather: '多云 20°C',
-        coverImage: 'https://image.pollinations.ai/prompt/Forbidden%20City%20Beijing%20ancient%20architecture%20red%20walls%20snow?width=1080&height=720&nologo=true&seed=102',
+        coverImage: getMockImageForLocation('gugong', '故宫博物院'),
         recommendations: ['太和殿的历史', '哪里可以买文创？', '延禧宫怎么走'],
         coordinates: [39.9163, 116.3972], // Beijing
     },
@@ -120,7 +155,7 @@ const MOCK_LOCATIONS: Record<string, LocationContext> = {
         name: '中国国家博物馆',
         area: '古代中国展厅',
         weather: '多云 21°C',
-        coverImage: 'https://image.pollinations.ai/prompt/National%20Museum%20of%20China%20Beijing%20architecture%20facade?width=1080&height=720&nologo=true&seed=103',
+        coverImage: getMockImageForLocation('national_museum', '中国国家博物馆'),
         recommendations: ['后母戊鼎在哪里', '玉龙展示柜', '古代中国基本陈列'],
         coordinates: [39.9040, 116.3974], // Beijing (East of Tiananmen Square)
     },
@@ -129,7 +164,7 @@ const MOCK_LOCATIONS: Record<string, LocationContext> = {
         name: '奥赛博物馆',
         area: '印象派画廊',
         weather: '晴 25°C',
-        coverImage: 'https://image.pollinations.ai/prompt/Musee%20d%27Orsay%20interior%20clock%20Paris?width=1080&height=720&nologo=true&seed=104',
+        coverImage: getMockImageForLocation('orsay', '奥赛博物馆'),
         recommendations: ['梵高的自画像', '莫奈的睡莲', '罗丹的地狱之门'],
         coordinates: [48.8599, 2.3265], // Paris (Near Louvre)
     },
@@ -138,7 +173,7 @@ const MOCK_LOCATIONS: Record<string, LocationContext> = {
         name: '大英博物馆',
         area: '大中庭',
         weather: '多云 15°C',
-        coverImage: 'https://image.pollinations.ai/prompt/British%20Museum%20Great%20Court%20London%20architecture?width=1080&height=720&nologo=true&seed=105',
+        coverImage: getMockImageForLocation('british_museum', '大英博物馆'),
         recommendations: ['罗塞塔石碑在哪里', '看法老木乃伊', '女史箴图展出了吗？'],
         coordinates: [51.5194, -0.1270],
     }
@@ -204,15 +239,31 @@ const MapUpdater: React.FC<{ center: [number, number], zoom: number }> = ({ cent
     return null;
 };
 
-// Helper: Fetch Real Museums from OSM
+let nominatimDisabledUntil = 0;
+
 const fetchNearbyMuseums = async (lat: number, lon: number) => {
+    const now = Date.now();
+    if (now < nominatimDisabledUntil) return [];
+    if (lat >= 18 && lat <= 54 && lon >= 73 && lon <= 135) return [];
+
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 2500);
+
     try {
-        // Search for museums within ~20km (0.2 degrees)
-        // Using a viewbox to bound the search
         const box = `${lon-0.2},${lat+0.2},${lon+0.2},${lat-0.2}`;
         const url = `https://nominatim.openstreetmap.org/search?format=json&q=museum&viewbox=${box}&bounded=1&limit=20&accept-language=zh-CN`;
         
-        const res = await fetch(url);
+        const res = await fetch(url, {
+            signal: controller.signal,
+            headers: { Accept: 'application/json' },
+        });
+
+        const contentType = res.headers.get('content-type') || '';
+        if (!res.ok || !contentType.includes('application/json')) {
+            nominatimDisabledUntil = Date.now() + 2 * 60 * 1000;
+            return [];
+        }
+
         const data = await res.json();
         
         if (Array.isArray(data) && data.length > 0) {
@@ -230,8 +281,10 @@ const fetchNearbyMuseums = async (lat: number, lon: number) => {
         }
         return [];
     } catch (e) {
-        console.error("Failed to fetch real museums", e);
+        nominatimDisabledUntil = Date.now() + 2 * 60 * 1000;
         return [];
+    } finally {
+        window.clearTimeout(timeoutId);
     }
 };
 
@@ -254,12 +307,16 @@ const Guide: React.FC = () => {
   const [step, setStep] = useState<InteractionStep>('locating'); 
   const [currentLocation, setCurrentLocation] = useState<LocationContext | null>(null);
   const [showMapSelector, setShowMapSelector] = useState(false);
+  const [tileUrlIndex, setTileUrlIndex] = useState(0);
+  const [tilesEnabled, setTilesEnabled] = useState(true);
+  const tileErrorTsRef = useRef(0);
   const [userRealLocation, setUserRealLocation] = useState<[number, number] | null>(null);
   const [sortedLocations, setSortedLocations] = useState<Array<LocationContext & { distance: number }>>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredLocations, setFilteredLocations] = useState<Array<LocationContext & { distance: number }>>([]);
   const [isSearching, setIsSearching] = useState(false);
   const searchTimeoutRef = useRef<any>(null);
+  const searchCacheRef = useRef(new window.Map<string, Array<LocationContext & { distance: number }>>());
   const stepRef = useRef<InteractionStep>(step);
   const isUserInteractingRef = useRef(false);
   const realMuseumsRef = useRef<Array<LocationContext & { distance: number }>>([]);
@@ -302,11 +359,22 @@ const Guide: React.FC = () => {
   const [cancelRecording, setCancelRecording] = useState(false); // Drag up to cancel state
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const [ttsVoices, setTtsVoices] = useState<SpeechSynthesisVoice[]>([]);
 
   // Keep stepRef in sync
   useEffect(() => {
     stepRef.current = step;
   }, [step]);
+
+  useEffect(() => {
+    if (!('speechSynthesis' in window)) return;
+    const load = () => setTtsVoices(window.speechSynthesis.getVoices());
+    load();
+    window.speechSynthesis.onvoiceschanged = load;
+    return () => {
+      window.speechSynthesis.onvoiceschanged = null;
+    };
+  }, []);
   
   // --- Session Management ---
 
@@ -467,45 +535,77 @@ const Guide: React.FC = () => {
             return;
         }
 
-        window.speechSynthesis.cancel(); // Stop any previous
-        const utterance = new SpeechSynthesisUtterance(text);
-        
-        // Voice Selection Strategy: Prioritize high-quality female Chinese voices
-        const voices = window.speechSynthesis.getVoices();
-        
-        // Priority list for "Gentle/Good" voices on common OS
-        // 1. "Xiaoxiao" (Microsoft Neural - Windows/Edge)
-        // 2. "Ting-Ting" (macOS/iOS - Good quality)
-        // 3. "Google 普通话" (Chrome Android/Desktop)
-        const preferredVoice = voices.find(v => 
-            (v.name.includes('Xiaoxiao') || v.name.includes('Ting-Ting') || v.name.includes('Google 普通话')) && 
-            (v.lang.includes('zh') || v.lang.includes('CN'))
-        ) || voices.find(v => 
-            // Generic fallback for female Chinese voices
-            v.lang.includes('zh') && (v.name.includes('Female') || v.name.includes('Woman') || v.name.includes('Lili'))
-        ) || voices.find(v => v.lang.includes('zh')); // Fallback to any Chinese voice
+        const normalizeForTTS = (raw: string) => {
+          return String(raw || '')
+            .replace(/[\u{1F300}-\u{1FAFF}]/gu, '')
+            .replace(/\s+/g, ' ')
+            .replace(/([，。！？；：])(\S)/g, '$1 $2')
+            .trim();
+        };
 
-        if (preferredVoice) {
-            utterance.voice = preferredVoice;
-        }
-        
-        // Adjust voice/pitch based on persona
-        if (guidePersona === 'kids') {
-            utterance.pitch = 1.3; // Higher pitch for kids
-            utterance.rate = 0.9;  // Slower
-        } else if (guidePersona === 'humorous') {
-            utterance.rate = 1.1; // Faster, energetic
-            utterance.pitch = 1.1;
-        } else {
-            // Expert/Default: "Gentle" settings
-            // Slightly lower pitch and slower rate usually sounds warmer/less robotic
-            utterance.pitch = 0.9; 
-            utterance.rate = 0.95;
-        }
+        const splitForTTS = (raw: string) => {
+          const t = normalizeForTTS(raw);
+          if (!t) return [];
+          const out: string[] = [];
+          let buf = '';
+          for (const ch of t) {
+            buf += ch;
+            if (ch === '。' || ch === '！' || ch === '？' || ch === '；' || ch === '\n') {
+              const s = buf.trim();
+              if (s) out.push(s);
+              buf = '';
+            }
+          }
+          const tail = buf.trim();
+          if (tail) out.push(tail);
+          return out;
+        };
 
-        utterance.onend = () => setPlayingMessageId(null);
-        window.speechSynthesis.speak(utterance);
+        const voices = ttsVoices.length > 0 ? ttsVoices : window.speechSynthesis.getVoices();
+        const isZhVoice = (v: SpeechSynthesisVoice) => /zh/i.test(v.lang) || /Chinese/i.test(v.lang);
+        const scoreVoice = (v: SpeechSynthesisVoice) => {
+          let s = 0;
+          if (isZhVoice(v)) s += 50;
+          if (/Ting-?Ting|Xiaoxiao|Xiaoyi|Mei-?Jia|Sin-?ji|Zhiyu|Google\s*普通话/i.test(v.name)) s += 30;
+          if (/Siri|Premium|Enhanced|Neural/i.test(v.name)) s += 10;
+          if (/female|woman/i.test(v.name)) s += 3;
+          return s;
+        };
+        const preferredVoice = [...voices]
+          .filter(isZhVoice)
+          .sort((a, b) => scoreVoice(b) - scoreVoice(a))[0] || voices.find(isZhVoice) || voices[0];
+
+        const baseRate = guidePersona === 'humorous' ? 1.06 : guidePersona === 'kids' ? 1.0 : 1.02;
+        const basePitch = guidePersona === 'humorous' ? 1.05 : guidePersona === 'kids' ? 1.12 : 1.0;
+
+        const parts = splitForTTS(text);
+        if (parts.length === 0) return;
+
+        window.speechSynthesis.cancel();
         setPlayingMessageId(id);
+
+        let idx = 0;
+        const speakNext = () => {
+          if (idx >= parts.length) {
+            setPlayingMessageId(null);
+            return;
+          }
+          const u = new SpeechSynthesisUtterance(parts[idx++]);
+          if (preferredVoice) {
+            u.voice = preferredVoice;
+            u.lang = preferredVoice.lang;
+          } else {
+            u.lang = 'zh-CN';
+          }
+          u.volume = 1;
+          u.rate = baseRate;
+          u.pitch = basePitch;
+          u.onend = () => window.setTimeout(speakNext, 140);
+          u.onerror = () => setPlayingMessageId(null);
+          window.speechSynthesis.speak(u);
+        };
+
+        speakNext();
     }
   };
 
@@ -585,6 +685,8 @@ const Guide: React.FC = () => {
   // Simulate Geolocation on Mount
   useEffect(() => {
       let watchId: number | null = null;
+      let cancelled = false;
+      const hotList = Object.values(MOCK_LOCATIONS).map((loc) => ({ ...loc, distance: 0 }));
 
       // 1. Try to get real location
       if (navigator.geolocation) {
@@ -592,52 +694,68 @@ const Guide: React.FC = () => {
               async (position) => {
                   const { latitude, longitude } = position.coords;
                   setUserRealLocation([latitude, longitude]);
-                  
-                  // Fetch Real Nearby Museums
-                  let realMuseums: Array<LocationContext & { distance: number }> = [];
-                  try {
-                       realMuseums = await fetchNearbyMuseums(latitude, longitude);
-                       realMuseumsRef.current = realMuseums;
-                   } catch (e) {
-                      console.warn("Failed to fetch real nearby museums", e);
-                  }
 
                   // Calculate distances for Mock Locations
                   const mockWithDistance = Object.values(MOCK_LOCATIONS).map(loc => ({
                       ...loc,
                       distance: getDistanceFromLatLonInKm(latitude, longitude, loc.coordinates[0], loc.coordinates[1])
                   }));
-                  
-                  // Combine: Real first, then Mock
-                  // Sort all by distance and filter strictly within 20km
-                  const allLocations = [...realMuseums, ...mockWithDistance]
+
+                  const mockNearby = mockWithDistance
+                      .slice()
                       .sort((a, b) => a.distance - b.distance)
-                      .filter(loc => loc.distance < 20);
-                  
-                  setSortedLocations(allLocations);
-                  setFilteredLocations(allLocations);
-                  
-                  // Real Auto-detection Logic:
-                  // Only auto-select if user is actually close to a supported museum (e.g., < 2km)
-                  if (allLocations.length > 0 && allLocations[0].distance < 2) {
-                      setCurrentLocation(allLocations[0]);
-                      // Move to Persona Selector
+                      .filter(loc => loc.distance < 50);
+
+                  const initialList = mockNearby.length > 0
+                      ? mockNearby
+                      : hotList;
+
+                  setSortedLocations(initialList);
+                  setFilteredLocations(initialList);
+
+                  if (initialList.length > 0 && initialList[0].distance < 2 && mockNearby.length > 0) {
+                      setCurrentLocation(initialList[0]);
                       setStep('agent-chat');
                       setShowPersonaSelector(true);
                   } else {
-                      // Found GPS, but too far from any museum
-                      // Go to manual selection, but show we found their location
                       setStep('manual-selection');
                   }
+
+                  fetchNearbyMuseums(latitude, longitude)
+                      .then((realMuseums) => {
+                          if (cancelled) return;
+                          realMuseumsRef.current = realMuseums;
+                          const combinedNearby = [...realMuseums, ...mockWithDistance]
+                              .sort((a, b) => a.distance - b.distance)
+                              .filter(loc => loc.distance < 50);
+
+                          const hasNearby = combinedNearby.length > 0;
+                          const finalList = hasNearby ? combinedNearby : hotList;
+
+                          setSortedLocations(finalList);
+                          if (!isUserInteractingRef.current) {
+                              setFilteredLocations(finalList);
+                          }
+
+                          if (stepRef.current === 'manual-selection' && !isUserInteractingRef.current) {
+                              const closest = finalList[0];
+                              if (hasNearby && closest && closest.distance < 2) {
+                                  setCurrentLocation(closest);
+                                  setShowMapSelector(false);
+                                  setShowPersonaSelector(true);
+                                  setStep('agent-chat');
+                              }
+                          }
+                      })
+                      .catch(() => {});
               },
               (error) => {
                   console.error("Geolocation denied or error:", error);
                   // Error handling: Do not guess location. Ask user to select manually.
                   setStep('manual-selection');
                   
-                  // Don't show default list on error either, keep clean until location is found or user searches
-                  setSortedLocations([]);
-                  setFilteredLocations([]);
+                  setSortedLocations(hotList);
+                  setFilteredLocations(hotList);
 
                   // 2. Start Background Watching (Persistent Attempt)
                   console.log("Starting background location watch...");
@@ -659,11 +777,11 @@ const Guide: React.FC = () => {
                               distance: getDistanceFromLatLonInKm(latitude, longitude, loc.coordinates[0], loc.coordinates[1])
                           }));
                           
-                          const updatedSorted = [...updatedReal, ...updatedMock]
+                          const updatedNearby = [...updatedReal, ...updatedMock]
                               .sort((a, b) => a.distance - b.distance)
-                              .filter(loc => loc.distance < 20);
-                          
-                          setSortedLocations(updatedSorted);
+                              .filter(loc => loc.distance < 50);
+                          const nextList = updatedNearby.length > 0 ? updatedNearby : hotList;
+                          setSortedLocations(nextList);
                           
                           // IMPORTANT: NEVER touch filteredLocations in background geolocation updates!
                           // This was causing the search results to disappear because 'setFilteredLocations' was being called with the sorted list,
@@ -672,14 +790,14 @@ const Guide: React.FC = () => {
                           
                           // Only update filtered if we are NOT searching and NOT interacting
                           if (!isUserInteractingRef.current) {
-                              setFilteredLocations(updatedSorted);
+                              setFilteredLocations(nextList);
                           }
                           
                           // 3. Auto-switch ONLY if still in manual selection mode AND user hasn't started searching/interacting
                           if (stepRef.current === 'manual-selection' && !isUserInteractingRef.current) {
-                              const closest = updatedSorted[0];
+                              const closest = updatedNearby[0];
                               // Only auto-switch if confidence is high (distance < 2km)
-                              if (closest.distance < 2) {
+                              if (closest && closest.distance < 2) {
                                   setCurrentLocation(closest);
                                   setShowMapSelector(false);
                                   setShowPersonaSelector(true); // Show selector on auto-switch too
@@ -700,19 +818,19 @@ const Guide: React.FC = () => {
               // Options for faster location (Initial attempt)
               {
                   enableHighAccuracy: false, 
-                  timeout: 15000,            // Increased to 15s for better success rate
-                  maximumAge: 60000          
+                  timeout: 8000,
+                  maximumAge: 300000
               }
           );
       } else {
           // Fallback if no geolocation support
           setStep('manual-selection');
-          // Don't show any default list if no location, keep it clean
-          setSortedLocations([]);
-          setFilteredLocations([]);
+          setSortedLocations(hotList);
+          setFilteredLocations(hotList);
       }
 
       return () => {
+          cancelled = true;
           if (watchId !== null) navigator.geolocation.clearWatch(watchId);
       };
   }, []);
@@ -786,46 +904,6 @@ const Guide: React.FC = () => {
       });
   };
 
-  /**
-   * 模拟 AI 对话服务 (RAG) - 支持多风格
-   */
-  const chatWithAgentService = async (query: string, persona: 'expert' | 'humorous' | 'kids'): Promise<{ text: string; card?: ChatMessage['cardData'] }> => {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-            if (query.includes('洗手间') || query.includes('厕所')) {
-                let text = '最近的洗手间位于您右后方20米处的楼梯旁，请留意指示牌。';
-                if (persona === 'humorous') text = '别急别急！向右后方转，20米看到楼梯就是啦！🚾';
-                if (persona === 'kids') text = '小朋友，洗手间在右边后面一点点，看到那个楼梯了吗？就在那里哦！';
-                resolve({ text });
-            } else if (query.includes('蒙娜丽莎')) {
-                let desc = '《蒙娜丽莎》是达·芬奇的传世名作。她那神秘的微笑使用了“晕涂法”，让轮廓线模糊，产生了朦胧的美感。';
-                let title = '蒙娜丽莎';
-                if (persona === 'humorous') {
-                    desc = '这就是大名鼎鼎的“照骗”始祖蒙娜丽莎！达芬奇用了“晕涂法”这个美颜滤镜，所以不管你站在哪，她好像都在盯着你笑，是不是有点毛骨悚然又很迷人？😏';
-                } else if (persona === 'kids') {
-                    desc = '这就是蒙娜丽莎阿姨！你看她是不是在笑？达芬奇爷爷用了一种神奇的画法，让她的笑容看起来好像在捉迷藏一样！🎨';
-                }
-
-                resolve({
-                    text: persona === 'kids' ? '哇！这可是镇馆之宝哦！' : '为您找到相关展品信息：',
-                    card: {
-                        title: title,
-                        subtitle: '列奥纳多·达·芬奇 · 油画',
-                        description: desc,
-                        tags: ['必看', '油画', '文艺复兴'],
-                        image: 'https://images.unsplash.com/photo-1580136608079-72029d0de130?auto=format&fit=crop&q=80&w=800'
-                    }
-                });
-            } else {
-                let text = '这是一个非常有趣的问题！根据馆藏数据，这件展品背后的故事是...';
-                if (persona === 'humorous') text = '哈哈，这个问题问到点子上了！其实这背后有个惊天大瓜...🍉';
-                if (persona === 'kids') text = '这是一个好问题！其实呀，很久很久以前...';
-                resolve({ text });
-            }
-        }, 1000);
-      });
-  };
-
   const handleSendMessage = async (text: string = inputText) => {
       if (!text.trim()) return;
       
@@ -850,8 +928,17 @@ const Guide: React.FC = () => {
           sender: 'user',
           timestamp: Date.now()
       };
+
+      const typingMsgId = `agent-typing-${Date.now()}`;
+      const typingMsg: ChatMessage = {
+          id: typingMsgId,
+          type: 'text',
+          content: '',
+          sender: 'agent',
+          timestamp: Date.now() + 1,
+      };
       
-      setMessages(prev => [...prev, newUserMsg]);
+      setMessages(prev => [...prev, newUserMsg, typingMsg]);
       setInputText('');
 
       // Persist User Message (if logged in)
@@ -859,19 +946,49 @@ const Guide: React.FC = () => {
           chatService.saveMessage(currentSessionId, newUserMsg);
       }
 
-      // Call AI Service with Persona
-      const response = await chatWithAgentService(text, guidePersona);
+      const history = [...messages, newUserMsg]
+        .slice(-12)
+        .filter((m) => m.type === 'text' || m.type === 'card')
+        .map((m) => ({
+          role: m.sender === 'user' ? ('user' as const) : ('assistant' as const),
+          content:
+            m.type === 'card'
+              ? `${String(m.content || '')}\n${m.cardData?.title ? `【卡片】${m.cardData.title}` : ''}`.trim()
+              : String(m.content || ''),
+        }))
+        .filter((m) => m.content);
+
+      const loc = userRealLocation ? { lat: userRealLocation[0], lng: userRealLocation[1] } : null;
+      let response: any = null;
+      try {
+        const res = await guideAgentService.chat({
+          message: text,
+          history,
+          persona: guidePersona,
+          location: loc || undefined,
+          clientTime: new Date().toISOString(),
+          locale: navigator.language,
+          context: {
+            selectedName: currentLocation?.name,
+            area: currentLocation?.area,
+            weather: currentLocation?.weather,
+          },
+        });
+        response = res.success && res.data ? res.data : null;
+      } catch {
+        response = null;
+      }
 
       const newAgentMsg: ChatMessage = {
           id: `agent-${Date.now()}`,
-          type: response.card ? 'card' : 'text',
-          content: response.text,
-          cardData: response.card,
+          type: response?.card ? 'card' : 'text',
+          content: response?.reply || '我这边刚刚走神了…你再说一遍我立刻认真听！',
+          cardData: response?.card,
           sender: 'agent',
           timestamp: Date.now(),
           audioUrl: 'tts-enabled' // Flag to enable TTS button
       };
-      setMessages(prev => [...prev, newAgentMsg]);
+      setMessages(prev => [...prev.filter(m => m.id !== typingMsgId), newAgentMsg]);
 
       // Persist Agent Message (if logged in)
       if (currentUser && currentSessionId) {
@@ -941,7 +1058,7 @@ const Guide: React.FC = () => {
 
   const handleSearch = (query: string) => {
       setSearchQuery(query);
-      isUserInteractingRef.current = !!query.trim(); // Mark as interacting if there's text
+      isUserInteractingRef.current = !!query.trim();
 
       if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
 
@@ -950,90 +1067,366 @@ const Guide: React.FC = () => {
           setIsSearching(false);
           return;
       }
-      
-      // 1. Local Filter (Immediate)
+
       const lowerQuery = query.toLowerCase();
-      const localMatches = sortedLocations.filter(loc => 
-          loc.name.toLowerCase().includes(lowerQuery) || 
+      const localMatches = sortedLocations.filter(loc =>
+          loc.name.toLowerCase().includes(lowerQuery) ||
           loc.area.toLowerCase().includes(lowerQuery)
       );
-      setFilteredLocations(localMatches); // Show local results first
+      setFilteredLocations(localMatches);
 
-      // 2. API Search (Debounced 500ms)
+      const buildAreaLabel = (parts: Array<string | undefined>) => {
+          const uniq = parts.filter(Boolean).map((s) => (s as string).trim()).filter(Boolean);
+          return uniq.slice(0, 3).join(' · ') || '未知区域';
+      };
+
+      const dedupeByKey = (items: Array<LocationContext & { distance: number }>) => {
+          const seen = new Set<string>();
+          const out: Array<LocationContext & { distance: number }> = [];
+          for (const it of items) {
+              const lat = it.coordinates[0];
+              const lon = it.coordinates[1];
+              const key = `${it.name}|${lat.toFixed(5)}|${lon.toFixed(5)}`;
+              if (seen.has(key)) continue;
+              seen.add(key);
+              out.push(it);
+          }
+          return out;
+      };
+
+      const scoreItem = (it: any) => {
+          const cls = String(it._class || '').toLowerCase();
+          const typ = String(it._type || '').toLowerCase();
+          let s = 0;
+          if (cls === 'tourism' || cls === 'amenity' || cls === 'leisure' || cls === 'historic') s += 50;
+          if (typ.includes('museum') || typ.includes('attraction') || typ.includes('gallery') || typ.includes('viewpoint') || typ.includes('park')) s += 20;
+          if (typeof it.distance === 'number' && it.distance > 0) s += Math.max(0, 30 - Math.min(30, it.distance));
+          return s;
+      };
+
+      const normalizeNominatimItem = (item: any, q: string) => {
+          const named = item?.namedetails || {};
+          const zhName =
+              named['name:zh'] ||
+              named['name:zh-CN'] ||
+              named['name:zh-Hans'] ||
+              named['zh'] ||
+              undefined;
+          const enName = named['name:en'] || named['en'] || undefined;
+          const baseName = item?.name || (item?.display_name ? String(item.display_name).split(',')[0] : '') || q;
+          const name = (zhName || baseName || enName || q).trim();
+
+          const address = item?.address || {};
+          const area = buildAreaLabel([
+              address.city || address.town || address.village,
+              address.state,
+              address.country,
+          ]);
+
+          const lat = parseFloat(item.lat);
+          const lon = parseFloat(item.lon);
+          const distance = userRealLocation ? getDistanceFromLatLonInKm(userRealLocation[0], userRealLocation[1], lat, lon) : 0;
+
+          return {
+              id: `osm-${item.place_id || `${lat},${lon}`}`,
+              name,
+              area,
+              weather: '未知',
+              coverImage: getMockImageForLocation(`osm-${item.place_id || `${lat},${lon}`}`, name),
+              recommendations: generateRecommendations(name, /[\u4e00-\u9fa5]/.test(name)),
+              coordinates: [lat, lon] as [number, number],
+              distance,
+              _class: item.class,
+              _type: item.type,
+          };
+      };
+
+      const normalizePhotonFeature = (feature: any, q: string) => {
+          const props = feature?.properties || {};
+          const name = (props['name:zh'] || props['name:zh-CN'] || props['name:zh-Hans'] || props.name || q).trim();
+          const coords = feature?.geometry?.coordinates;
+          const lon = Array.isArray(coords) ? parseFloat(coords[0]) : NaN;
+          const lat = Array.isArray(coords) ? parseFloat(coords[1]) : NaN;
+          const distance = userRealLocation ? getDistanceFromLatLonInKm(userRealLocation[0], userRealLocation[1], lat, lon) : 0;
+          const area = buildAreaLabel([props.city, props.state, props.country]);
+          return {
+              id: `photon-${props.osm_id || `${lat},${lon}`}`,
+              name,
+              area,
+              weather: '未知',
+              coverImage: getMockImageForLocation(`photon-${props.osm_id || `${lat},${lon}`}`, name),
+              recommendations: generateRecommendations(name, /[\u4e00-\u9fa5]/.test(name)),
+              coordinates: [lat, lon] as [number, number],
+              distance,
+              _class: props.osm_key,
+              _type: props.osm_value,
+          };
+      };
+
+      const searchRemote = async (q: string) => {
+          const cacheKey = `${q}|${userRealLocation ? `${userRealLocation[0].toFixed(3)},${userRealLocation[1].toFixed(3)}` : 'na'}`;
+          const cached = searchCacheRef.current.get(cacheKey);
+          if (cached) return cached;
+
+          const lang = 'zh-CN,en';
+          const limit = 8;
+
+          const prefersZh = (navigator.language || '').toLowerCase().startsWith('zh');
+          const inChina = Boolean(
+              userRealLocation &&
+              userRealLocation[0] >= 18 &&
+              userRealLocation[0] <= 54 &&
+              userRealLocation[1] >= 73 &&
+              userRealLocation[1] <= 135
+          );
+          const skipNominatim = inChina || prefersZh;
+          const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(q)}&limit=${limit}&addressdetails=1&extratags=1&namedetails=1&accept-language=${encodeURIComponent(lang)}`;
+
+          const results: any[] = [];
+          const tryPhoton = async () => {
+              try {
+                  const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=${limit}&lang=zh`;
+                  const data = await fetchJsonWithTimeout<any>(photonUrl, 3500);
+                  const features = Array.isArray(data?.features) ? data.features : [];
+                  results.push(...features.map((f: any) => normalizePhotonFeature(f, q)));
+              } catch {}
+          };
+
+          const tryNominatim = async () => {
+              if (skipNominatim) return;
+              try {
+                  const data = await fetchJsonWithTimeout<any[]>(nominatimUrl, 3500);
+                  if (Array.isArray(data)) results.push(...data.map((item) => normalizeNominatimItem(item, q)));
+              } catch {}
+          };
+
+          await tryPhoton();
+          if (results.length === 0) await tryNominatim();
+
+          const cleaned = results
+              .filter((it: any) => Number.isFinite(it.coordinates?.[0]) && Number.isFinite(it.coordinates?.[1]))
+              .sort((a: any, b: any) => (scoreItem(b) - scoreItem(a)) || ((a.distance || 0) - (b.distance || 0)))
+              .slice(0, 10)
+              .map(({ _class, _type, ...rest }: any) => rest);
+
+          searchCacheRef.current.set(cacheKey, cleaned);
+          return cleaned;
+      };
+
+      type BBox = { minLon: number; minLat: number; maxLon: number; maxLat: number; label: string };
+
+      const getAreaCandidate = async (q: string): Promise<BBox | null> => {
+          const trimmed = q.trim();
+          if (!trimmed) return null;
+
+          const isChineseQuery = /[\u4e00-\u9fa5]/.test(trimmed);
+          const looksLikePoiCategory = /(博物馆|美术馆|展览馆|展览|景点|风景区|公园|古迹|纪念馆|museum|gallery|exhibition|attraction|park|viewpoint)/i.test(trimmed);
+          if (looksLikePoiCategory) return null;
+
+          const prefersZh = (navigator.language || '').toLowerCase().startsWith('zh');
+          const inChina = Boolean(
+              userRealLocation &&
+              userRealLocation[0] >= 18 &&
+              userRealLocation[0] <= 54 &&
+              userRealLocation[1] >= 73 &&
+              userRealLocation[1] <= 135
+          );
+          const skipNominatim = inChina || prefersZh;
+          const limit = 1;
+
+          const tryPhoton = async (): Promise<BBox | null> => {
+              try {
+                  const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(trimmed)}&limit=${limit}&lang=${isChineseQuery ? 'zh' : 'en'}`;
+                  const data = await fetchJsonWithTimeout<any>(photonUrl, 3500);
+                  const feature = Array.isArray(data?.features) ? data.features[0] : null;
+                  if (!feature) return null;
+
+                  const props = feature.properties || {};
+                  const osmKey = String(props.osm_key || '').toLowerCase();
+                  const osmVal = String(props.osm_value || '').toLowerCase();
+                  const type = String(props.type || '').toLowerCase();
+                  const label = (props['name:zh'] || props['name:zh-CN'] || props['name:zh-Hans'] || props.name || trimmed).trim();
+
+                  const isArea =
+                      osmKey === 'place' ||
+                      osmKey === 'boundary' ||
+                      ['city', 'town', 'village', 'state', 'country', 'county', 'region', 'district', 'province'].includes(osmVal) ||
+                      ['city', 'town', 'village', 'state', 'country', 'county', 'region', 'district', 'province'].includes(type);
+
+                  if (!isArea) return null;
+
+                  const extent = props.extent;
+                  if (Array.isArray(extent) && extent.length === 4) {
+                      const minLon = parseFloat(extent[0]);
+                      const minLat = parseFloat(extent[1]);
+                      const maxLon = parseFloat(extent[2]);
+                      const maxLat = parseFloat(extent[3]);
+                      if ([minLon, minLat, maxLon, maxLat].every(Number.isFinite)) {
+                          return { minLon, minLat, maxLon, maxLat, label };
+                      }
+                  }
+
+                  const coords = feature.geometry?.coordinates;
+                  const lon = Array.isArray(coords) ? parseFloat(coords[0]) : NaN;
+                  const lat = Array.isArray(coords) ? parseFloat(coords[1]) : NaN;
+                  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+
+                  return { minLon: lon - 0.8, minLat: lat - 0.6, maxLon: lon + 0.8, maxLat: lat + 0.6, label };
+              } catch {
+                  return null;
+              }
+          };
+
+          const tryNominatim = async (): Promise<BBox | null> => {
+              if (skipNominatim) return null;
+              try {
+                  const lang = 'zh-CN,en';
+                  const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(trimmed)}&limit=${limit}&addressdetails=1&namedetails=1&accept-language=${encodeURIComponent(lang)}`;
+                  const data = await fetchJsonWithTimeout<any[]>(url, 3500);
+                  const item = Array.isArray(data) ? data[0] : null;
+                  if (!item) return null;
+
+                  const cls = String(item.class || '').toLowerCase();
+                  const typ = String(item.type || '').toLowerCase();
+                  const isArea =
+                      cls === 'place' ||
+                      cls === 'boundary' ||
+                      typ.includes('administrative') ||
+                      ['city', 'town', 'village', 'state', 'country', 'county', 'region', 'district', 'province'].includes(typ);
+
+                  if (!isArea) return null;
+
+                  const label = (item?.namedetails?.['name:zh'] || item?.namedetails?.['name:zh-CN'] || item?.namedetails?.['name:zh-Hans'] || item.name || (item.display_name ? String(item.display_name).split(',')[0] : '') || trimmed).trim();
+                  const bb = item.boundingbox;
+                  if (Array.isArray(bb) && bb.length === 4) {
+                      const south = parseFloat(bb[0]);
+                      const north = parseFloat(bb[1]);
+                      const west = parseFloat(bb[2]);
+                      const east = parseFloat(bb[3]);
+                      if ([south, north, west, east].every(Number.isFinite)) {
+                          return { minLon: west, minLat: south, maxLon: east, maxLat: north, label };
+                      }
+                  }
+                  return null;
+              } catch {
+                  return null;
+              }
+          };
+
+          return (await tryPhoton()) || (await tryNominatim());
+      };
+
+      const searchAreaPois = async (q: string): Promise<Array<LocationContext & { distance: number }>> => {
+          const area = await getAreaCandidate(q);
+          if (!area) return [];
+
+          const prefersZh = (navigator.language || '').toLowerCase().startsWith('zh');
+          const inChina = Boolean(
+              userRealLocation &&
+              userRealLocation[0] >= 18 &&
+              userRealLocation[0] <= 54 &&
+              userRealLocation[1] >= 73 &&
+              userRealLocation[1] <= 135
+          );
+          const skipNominatim = inChina || prefersZh;
+
+          const maxTotal = 30;
+          const perQuery = 8;
+          const keywords = [
+              '博物馆',
+              '美术馆',
+              '展览馆',
+              '景点',
+              '公园',
+              '风景区',
+              'museum',
+              'gallery',
+              'attraction',
+              'park',
+              'viewpoint',
+          ];
+
+          const bboxParam = `${area.minLon},${area.minLat},${area.maxLon},${area.maxLat}`;
+
+          const results: Array<LocationContext & { distance: number }> = [];
+
+          const runPhoton = async (keyword: string) => {
+              const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(`${area.label} ${keyword}`)}&limit=${perQuery}&lang=zh&bbox=${encodeURIComponent(bboxParam)}`;
+              try {
+                  const data = await fetchJsonWithTimeout<any>(url, 3500);
+                  const features = Array.isArray(data?.features) ? data.features : [];
+                  results.push(...features.map((f: any) => normalizePhotonFeature(f, q)));
+              } catch {}
+          };
+
+          const runNominatim = async (keyword: string) => {
+              const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(keyword)}&limit=${perQuery}&bounded=1&viewbox=${encodeURIComponent(bboxParam)}&addressdetails=1&namedetails=1&extratags=1&accept-language=${encodeURIComponent('zh-CN,en')}`;
+              try {
+                  const data = await fetchJsonWithTimeout<any[]>(url, 3500);
+                  if (Array.isArray(data)) results.push(...data.map((item) => normalizeNominatimItem(item, q)));
+              } catch {}
+          };
+
+          for (const keyword of keywords) {
+              await runPhoton(keyword);
+              if (results.length >= maxTotal) break;
+          }
+
+          if (!skipNominatim && results.length < 8) {
+              for (const keyword of keywords.slice(0, 6)) {
+                  await runNominatim(keyword);
+                  if (results.length >= maxTotal) break;
+              }
+          }
+
+          return dedupeByKey(results)
+              .sort((a, b) => (scoreItem(b as any) - scoreItem(a as any)) || ((a.distance || 0) - (b.distance || 0)))
+              .slice(0, maxTotal);
+      };
+
+      const expandQueries = (q: string) => {
+          const trimmed = q.trim();
+          if (!/[\u4e00-\u9fa5]/.test(trimmed)) return [trimmed];
+          const aliases: Record<string, string> = {
+              '西湖': '杭州 西湖',
+              '长城': '北京 长城',
+              '兵马俑': '西安 兵马俑',
+              '外滩': '上海 外滩',
+              '天安门': '北京 天安门',
+              '故宫': '北京 故宫',
+              '颐和园': '北京 颐和园',
+          };
+
+          const suffixes = ['博物馆', '展览', '景点', '风景区', '美术馆', '公园', '古迹', '纪念馆'];
+          const hasSuffix = suffixes.some((s) => trimmed.includes(s));
+
+          const queries = [trimmed];
+          if (aliases[trimmed]) queries.push(aliases[trimmed]);
+
+          if (!hasSuffix && trimmed.length >= 2) {
+              queries.push(`${trimmed} 景点`);
+              queries.push(`${trimmed} 风景区`);
+              queries.push(`${trimmed} 博物馆`);
+          }
+
+          return queries.slice(0, 5);
+      };
+
       setIsSearching(true);
       searchTimeoutRef.current = setTimeout(async () => {
           try {
-              // HYBRID SEARCH STRATEGY:
-              // 1. Detect if query is Chinese characters
-              const isChinese = /[\u4e00-\u9fa5]/.test(query);
-              
+              const queries = expandQueries(query);
               let apiResults: Array<LocationContext & { distance: number }> = [];
-
-              if (isChinese) {
-                  // Strategy A: Use Baidu Place Suggestion API (via CORS proxy or direct if allowed)
-                  // Note: Direct client-side Baidu API calls often have CORS issues or require JSONP.
-                  // Since we are in a pure frontend demo without a backend proxy, we'll try a clever fallback:
-                  // Use a public relay or fallback to OSM with enhanced parameters.
-                  
-                  // For this demo environment without a real backend/key, we will stick to OSM but with a critical optimization:
-                  // We will try to translate/augment the query if possible, or just accept OSM's limitations but filter better.
-                  
-                  // Actually, let's try a different free source: "Nomatim" is good but "Photon" (based on OSM) sometimes handles fuzzy search better.
-                  // But sticking to the user's request for "Baidu-like" quality without a key is hard.
-                  // Let's implement a "Mock/Heuristic" translation layer for common landmarks to boost OSM? 
-                  // No, that's not scalable.
-                  
-                  // Let's stick to OSM but use the specific 'amenity' or 'tourism' filters to narrow down to landmarks/museums, reducing noise.
-                  const osmQuery = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&accept-language=zh-CN,en&limit=8&addressdetails=1&featuretype=settlement&layer=address`;
-                  
-                  const res = await fetch(osmQuery);
-                  const data = await res.json();
-                  
-                  if (Array.isArray(data)) {
-                      apiResults = data
-                        // Filter out irrelevant types (like administrative boundaries or roads if we want specific POIs)
-                        // .filter((item: any) => item.class === 'tourism' || item.class === 'amenity' || item.class === 'place' || item.class === 'leisure')
-                        .map((item: any) => {
-                          const name = item.name || item.display_name.split(',')[0];
-                          return {
-                              id: `osm-${item.place_id}`,
-                              name: name, 
-                              area: item.display_name, 
-                              weather: '未知',
-                              coverImage: `https://image.pollinations.ai/prompt/cinematic%20photo%20of%20${encodeURIComponent(name)}%20landmark%20architecture%20scenery?width=640&height=480&nologo=true&seed=${item.place_id}`,
-                              recommendations: generateRecommendations(name, true),
-                              coordinates: [parseFloat(item.lat), parseFloat(item.lon)],
-                              distance: userRealLocation ? getDistanceFromLatLonInKm(userRealLocation[0], userRealLocation[1], parseFloat(item.lat), parseFloat(item.lon)) : 0
-                          };
-                      });
-                  }
-
-              } else {
-                  // Strategy B: English/International Query -> Use OSM Standard
-                  const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&accept-language=en,zh-CN&limit=5`);
-                  const data = await res.json();
-                  if (Array.isArray(data)) {
-                      apiResults = data.map((item: any) => {
-                          const name = item.name || item.display_name.split(',')[0];
-                          return {
-                              id: `osm-${item.place_id}`,
-                              name: name,
-                              area: item.display_name,
-                              weather: 'Unknown',
-                              coverImage: `https://image.pollinations.ai/prompt/cinematic%20photo%20of%20${encodeURIComponent(name)}%20landmark%20architecture%20scenery?width=640&height=480&nologo=true&seed=${item.place_id}`,
-                              recommendations: generateRecommendations(name, false),
-                              coordinates: [parseFloat(item.lat), parseFloat(item.lon)],
-                              distance: userRealLocation ? getDistanceFromLatLonInKm(userRealLocation[0], userRealLocation[1], parseFloat(item.lat), parseFloat(item.lon)) : 0
-                          };
-                      });
-                  }
+              for (const q of queries) {
+                  apiResults = await searchRemote(q);
+                  if (apiResults.length > 0) break;
               }
-
-              // Merge and Set
-              setFilteredLocations([...localMatches, ...apiResults]);
-
-          } catch (error) {
-              console.error("Search API Error:", error);
+              const areaPois = await searchAreaPois(query);
+              if (areaPois.length > 0) {
+                  setFilteredLocations(dedupeByKey([...localMatches, ...areaPois]));
+              } else {
+                  setFilteredLocations(dedupeByKey([...localMatches, ...apiResults]));
+              }
           } finally {
               setIsSearching(false);
           }
@@ -1043,13 +1436,14 @@ const Guide: React.FC = () => {
   const handleCustomLocation = () => {
       if (!searchQuery.trim()) return;
       
+      const customId = `custom-${Date.now()}`;
       // Create a temporary custom location
       const customLoc: LocationContext = {
-          id: `custom-${Date.now()}`,
+          id: customId,
           name: searchQuery,
           area: '自定义探索区域',
           weather: '未知',
-          coverImage: `https://image.pollinations.ai/prompt/cinematic%20photo%20of%20${encodeURIComponent(searchQuery)}%20landmark%20architecture%20scenery?width=640&height=480&nologo=true&seed=${Date.now()}`,
+          coverImage: getMockImageForLocation(customId, searchQuery),
           recommendations: generateRecommendations(searchQuery, true),
           coordinates: [39.9042, 116.4074], // Default to Beijing if we don't know (or could ask user to pick on map later)
       };
@@ -1102,6 +1496,12 @@ const Guide: React.FC = () => {
       navigate(`/travelogue/${item.id}`);
   };
 
+  const nearestWithin50km = sortedLocations.find(
+      (l) => typeof l.distance === 'number' && l.distance > 0 && l.distance <= 50
+  );
+  const nearestName = typeof nearestWithin50km?.name === 'string' ? nearestWithin50km.name.trim() : '';
+  const hasNearbyWithin50km = Boolean(userRealLocation && nearestName);
+
   return (
     <div className="flex flex-col h-screen w-full bg-stone-50 text-stone-800 relative overflow-hidden">
       
@@ -1110,7 +1510,7 @@ const Guide: React.FC = () => {
           <div className="absolute inset-0 z-[700] bg-stone-900 flex flex-col items-center justify-center text-white space-y-6">
               {/* Back Button */}
               <button 
-                  onClick={() => navigate(-1)} 
+                  onClick={() => navigate('/', { replace: true })} 
                   className="absolute top-4 right-4 p-2 text-stone-400 hover:text-white bg-stone-800/50 rounded-full transition-colors z-[710]"
               >
                   <X size={24} />
@@ -1143,7 +1543,7 @@ const Guide: React.FC = () => {
           <div className="absolute inset-0 z-[600] bg-stone-900 flex flex-col items-center justify-center text-white p-6">
               {/* Back Button */}
               <button 
-                  onClick={() => navigate(-1)} 
+                  onClick={() => navigate('/', { replace: true })} 
                   className="absolute top-4 right-4 p-2 text-stone-400 hover:text-white bg-stone-800/50 rounded-full transition-colors z-[610]"
               >
                   <X size={24} />
@@ -1157,13 +1557,12 @@ const Guide: React.FC = () => {
                           <MapPin size={32} className={userRealLocation ? 'text-amber-500' : 'text-stone-400'} />
                       </div>
                       <h3 className="text-xl font-bold font-serif">
-                          {userRealLocation ? '已定位到当前位置' : '无法自动定位'}
+                          {hasNearbyWithin50km ? '已定位到当前位置' : '定位失败 / 未检测到任何博物馆/地标'}
                       </h3>
                       <p className="text-stone-400 text-sm">
-                          {userRealLocation 
-                            ? `系统检测到您在【${sortedLocations[0]?.name}】附近，您也可以手动搜索`
-                            : '信号较弱或权限未开启，请选择您所在的博物馆'
-                          }
+                          {hasNearbyWithin50km
+                            ? `系统检测到您在【${nearestName}】附近，您也可以手动搜索`
+                            : '您也可以手动搜索'}
                       </p>
                   </div>
 
@@ -1185,11 +1584,13 @@ const Guide: React.FC = () => {
 
                   <div className="grid grid-cols-1 gap-3 overflow-y-auto flex-1 min-h-0 pr-1 custom-scrollbar">
                       {/* Only show "Nearby" header if we have real location data */}
-                      {!searchQuery && filteredLocations.length > 0 && userRealLocation && (
+                      {!searchQuery && filteredLocations.length > 0 && (
                           <div className="flex items-center px-1 pt-1 pb-2">
                               <Compass size={12} className="text-amber-500 mr-1.5" />
                               <span className="text-xs font-bold text-stone-500 uppercase tracking-wider">
-                                  附近热门博物馆
+                                  {(userRealLocation && filteredLocations.some(l => l.distance > 0 && l.distance <= 50 && Boolean(l.name)))
+                                    ? '附近热门博物馆/地标'
+                                    : '热门博物馆/地标'}
                               </span>
                           </div>
                       )}
@@ -1318,34 +1719,48 @@ const Guide: React.FC = () => {
           </div>
       )}
 
-      {/* Background Map (Leaflet) */}
-      <div className={`absolute inset-0 z-0 transition-opacity duration-500 ${isChatHidden ? 'opacity-100' : 'opacity-80'} pointer-events-auto`}>
-          {/* Default view to Paris if no location yet, though 'locating' covers it */}
-          <MapContainer 
-              center={[48.8606, 2.3376]} 
-              zoom={16} 
-              style={{ width: '100%', height: '100%' }}
-              zoomControl={false}
-              attributionControl={false}
-              // Enable interaction when chat is hidden, otherwise keep it restricted if needed
-              // Actually Leaflet handles this via z-index, but we can also toggle dragging/zooming if we wanted strict modal behavior.
-              // For now, pointer-events-auto on the container is enough.
-          >
-              <TileLayer
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              />
-              {currentLocation && (
-                  <>
-                    <Marker position={currentLocation.coordinates} icon={UserIcon} />
-                    <MapUpdater center={currentLocation.coordinates} zoom={16} />
-                  </>
-              )}
-          </MapContainer>
-          
-          {/* Overlay gradient to ensure chat is readable - hide when chat is hidden */}
-          <div className={`absolute inset-0 bg-gradient-to-t from-stone-50 via-stone-50/80 to-transparent pointer-events-none z-[400] transition-opacity duration-500 ${isChatHidden ? 'opacity-0' : 'opacity-100'}`}></div>
-      </div>
+      {step === 'agent-chat' ? (
+        <div className={`absolute inset-0 z-0 transition-opacity duration-500 ${isChatHidden ? 'opacity-100' : 'opacity-80'} pointer-events-auto`}>
+            {tilesEnabled ? (
+              <MapContainer 
+                  center={(currentLocation?.coordinates || [48.8606, 2.3376]) as [number, number]} 
+                  zoom={16} 
+                  style={{ width: '100%', height: '100%' }}
+                  zoomControl={false}
+                  attributionControl={false}
+              >
+                  <TileLayer
+                      url={MAP_TILE_URLS[tileUrlIndex]}
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                      eventHandlers={{
+                        tileerror: () => {
+                          const now = Date.now();
+                          if (now - tileErrorTsRef.current < 1200) return;
+                          tileErrorTsRef.current = now;
+                          if (tileUrlIndex < MAP_TILE_URLS.length - 1) {
+                            setTileUrlIndex(tileUrlIndex + 1);
+                          } else {
+                            setTilesEnabled(false);
+                          }
+                        },
+                      }}
+                  />
+                  {currentLocation && (
+                      <>
+                        <Marker position={currentLocation.coordinates} icon={UserIcon} />
+                        <MapUpdater center={currentLocation.coordinates} zoom={16} />
+                      </>
+                  )}
+              </MapContainer>
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-br from-stone-100 via-stone-50 to-amber-50/40"></div>
+            )}
+            
+            <div className={`absolute inset-0 bg-gradient-to-t from-stone-50 via-stone-50/80 to-transparent pointer-events-none z-[400] transition-opacity duration-500 ${isChatHidden ? 'opacity-0' : 'opacity-100'}`}></div>
+        </div>
+      ) : (
+        <div className="absolute inset-0 z-0 bg-gradient-to-br from-stone-100 via-stone-50 to-amber-50/40"></div>
+      )}
 
       {/* Map Toggle Button - Floating Action Button */}
       {step === 'agent-chat' && (
@@ -1441,7 +1856,7 @@ const Guide: React.FC = () => {
 
             {/* Close/Back Button - Minimal Circle */}
             <button 
-               onClick={() => navigate(-1)} 
+               onClick={() => navigate('/', { replace: true })} 
                className="w-10 h-10 bg-white/90 backdrop-blur-md rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.08)] border border-white/60 pointer-events-auto flex items-center justify-center active:scale-95 transition-all text-stone-600 hover:text-red-500 z-30"
             >
                <X size={18} />
@@ -1634,7 +2049,18 @@ const Guide: React.FC = () => {
                                     : 'bg-white/90 backdrop-blur-md text-stone-800 border border-white/50 rounded-tl-none'
                             }`}
                         >
-                            {typeof msg.content === 'string' ? msg.content : ''}
+                            {msg.sender === 'agent' && msg.id.startsWith('agent-typing-') ? (
+                              <div className="flex items-center space-x-2">
+                                <span className="text-xs font-medium text-stone-500">正在查资料</span>
+                                <div className="flex items-end space-x-1">
+                                  <span className="w-1.5 h-1.5 bg-stone-400 rounded-full animate-bounce [animation-duration:900ms]"></span>
+                                  <span className="w-1.5 h-1.5 bg-stone-400 rounded-full animate-bounce [animation-duration:900ms] [animation-delay:150ms]"></span>
+                                  <span className="w-1.5 h-1.5 bg-stone-400 rounded-full animate-bounce [animation-duration:900ms] [animation-delay:300ms]"></span>
+                                </div>
+                              </div>
+                            ) : (
+                              (typeof msg.content === 'string' ? msg.content : '')
+                            )}
                         </div>
                     )}
                     

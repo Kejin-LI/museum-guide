@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, BookOpen, Map, Plus, MapPin, Trash2, Calendar, Star } from 'lucide-react';
+import { ArrowLeft, BookOpen, Map, Plus, MapPin, Trash2, Calendar, Star, X } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { travelogueService, type TravelogueItem } from '../services/travelogue';
 import { planService, type SavedPlan } from '../services/plan';
@@ -40,6 +40,11 @@ const UserContentList: React.FC = () => {
     const [plans, setPlans] = useState<SavedPlan[]>([]);
     const [journals, setJournals] = useState<TravelogueItem[]>([]);
     // const [isLoading, setIsLoading] = useState(false);
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
+    const [confirmTitle, setConfirmTitle] = useState('提示');
+    const [confirmMessage, setConfirmMessage] = useState('');
+    const [confirmActionText, setConfirmActionText] = useState('知道了');
+    const confirmActionRef = React.useRef<null | (() => void)>(null);
     
     // Determine type based on path
     const type = location.pathname.split('/').pop(); // 'journals', 'plans', 'favorites'
@@ -117,6 +122,44 @@ const UserContentList: React.FC = () => {
         }
     };
 
+    const openConfirmModal = (opts: {
+        title?: string;
+        message: string;
+        actionText?: string;
+        onAction?: (() => void) | null;
+    }) => {
+        setConfirmTitle(opts.title || '提示');
+        setConfirmMessage(opts.message);
+        setConfirmActionText(opts.actionText || '知道了');
+        confirmActionRef.current = opts.onAction || null;
+        setShowConfirmModal(true);
+    };
+
+    const removePlanFromLocalCache = (planId: string) => {
+        const savedPlansStr = localStorage.getItem('my_plans');
+        if (!savedPlansStr) return;
+        try {
+            const allPlans: SavedPlan[] = JSON.parse(savedPlansStr);
+            const next = allPlans.filter((p) => p.id !== planId);
+            localStorage.setItem('my_plans', JSON.stringify(next));
+        } catch {
+        }
+    };
+
+    const handleDeletePlan = async (e: React.MouseEvent, planId: string) => {
+        e.stopPropagation();
+        openConfirmModal({
+            title: '删除这份计划？',
+            message: '删掉就真的“说走就走”了噢～\n确认删除后将无法恢复。',
+            actionText: '删除',
+            onAction: async () => {
+                setPlans((prev) => prev.filter((p) => p.id !== planId));
+                removePlanFromLocalCache(planId);
+                await planService.deletePlan(planId);
+            },
+        });
+    };
+
     if (type === 'journals') {
         config = {
             title: '我的手帐',
@@ -142,13 +185,59 @@ const UserContentList: React.FC = () => {
             {/* Header */}
             <header className="px-6 py-4 flex items-center bg-white border-b border-stone-100 sticky top-0 z-10">
                 <button 
-                    onClick={() => navigate(-1)}
+                    onClick={() => navigate('/profile', { replace: true })}
                     className="p-2 -ml-2 text-stone-600 hover:bg-stone-100 rounded-full transition-colors"
                 >
                     <ArrowLeft size={20} />
                 </button>
                 <h1 className="text-lg font-bold font-serif text-stone-900 ml-2">{config.title}</h1>
             </header>
+
+            {showConfirmModal && (
+                <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6">
+                    <button
+                        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                        onClick={() => setShowConfirmModal(false)}
+                        aria-label="Close"
+                    />
+                    <div className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl border border-stone-100 overflow-hidden animate-in fade-in zoom-in duration-200">
+                        <div className="p-5 border-b border-stone-100 flex items-center justify-between">
+                            <div className="text-sm font-bold text-stone-900">{confirmTitle}</div>
+                            <button
+                                onClick={() => setShowConfirmModal(false)}
+                                className="w-9 h-9 rounded-full bg-stone-50 flex items-center justify-center text-stone-500 hover:bg-stone-100 transition-colors"
+                                aria-label="Close"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="p-5">
+                            <div className="text-sm text-stone-600 leading-relaxed whitespace-pre-line">
+                                {confirmMessage}
+                            </div>
+                            <div className="mt-5 flex gap-3">
+                                {confirmActionText !== '知道了' && (
+                                    <button
+                                        onClick={() => setShowConfirmModal(false)}
+                                        className="flex-1 h-11 rounded-2xl border border-stone-200 text-stone-700 font-bold text-sm hover:bg-stone-50 transition-colors"
+                                    >
+                                        取消
+                                    </button>
+                                )}
+                                <button
+                                    onClick={async () => {
+                                        setShowConfirmModal(false);
+                                        await confirmActionRef.current?.();
+                                    }}
+                                    className="flex-1 h-11 rounded-2xl bg-stone-900 text-white font-bold text-sm hover:bg-stone-800 transition-colors"
+                                >
+                                    {confirmActionText}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <main className="flex-1 overflow-y-auto flex flex-col items-center">
                 <div className="w-full max-w-3xl flex-1">
@@ -200,7 +289,11 @@ const UserContentList: React.FC = () => {
                 ) : type === 'plans' && plans.length > 0 ? (
                     <div className="p-4 space-y-4">
                         {plans.map(plan => (
-                            <div key={plan.id} className="bg-white rounded-2xl p-3 shadow-sm border border-stone-100 flex space-x-4 active:scale-[0.99] transition-transform">
+                            <div
+                              key={plan.id}
+                              onClick={() => navigate('/plan/edit', { state: { planId: plan.id } })}
+                              className="bg-white rounded-2xl p-3 shadow-sm border border-stone-100 flex space-x-4 active:scale-[0.99] transition-transform cursor-pointer"
+                            >
                                 <div className="w-24 h-24 rounded-xl bg-stone-200 overflow-hidden flex-shrink-0 relative">
                                     <img 
                                         src={plan.image} 
@@ -227,6 +320,13 @@ const UserContentList: React.FC = () => {
                                         <span className="text-xs text-stone-400 font-medium">
                                             {plan.startDate ? new Date(plan.startDate).toLocaleDateString() : '未定'}
                                         </span>
+                                        <button 
+                                            onClick={(e) => handleDeletePlan(e, plan.id)}
+                                            className="p-1.5 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                                            aria-label="删除计划"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
                                         <span className={`text-xs px-2 py-1 rounded-full font-medium ${
                                             plan.status === 'upcoming' ? 'bg-blue-50 text-blue-600' :
                                             plan.status === 'completed' ? 'bg-stone-100 text-stone-500' :

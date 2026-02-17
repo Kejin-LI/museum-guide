@@ -1,15 +1,18 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, ArrowRight, User, Loader2, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { APP_NAME, APP_SLOGAN_CN } from '../config';
 import DustText from '../components/DustText';
-import { loginService, registerService, isEmailRegisteredService, isNicknameTakenService } from '../services/auth'; // Import Service
+import { loginService, registerService, isEmailRegisteredService, isNicknameTakenService, sendEmailCodeService, registerWithEmailCodeService, sendPasswordResetEmailService } from '../services/auth'; // Import Service
 
 const Auth: React.FC = () => {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [emailCode, setEmailCode] = useState('');
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [codeCooldown, setCodeCooldown] = useState(0);
   
   const [formData, setFormData] = useState({
     email: '',
@@ -26,6 +29,14 @@ const Auth: React.FC = () => {
       // Fallback to another classical art image
       setBgImage('https://images.unsplash.com/photo-1576504677634-06b2130bd1f3?auto=format&fit=crop&q=80&w=1080');
   };
+
+  useEffect(() => {
+    if (codeCooldown <= 0) return;
+    const timer = window.setInterval(() => {
+      setCodeCooldown((s) => (s > 0 ? s - 1 : 0));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [codeCooldown]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,6 +92,13 @@ const Auth: React.FC = () => {
         setIsLoading(false);
         return;
       }
+
+      const code = emailCode.trim();
+      if (!/^\d{6}$/.test(code)) {
+        setError('请输入 6 位验证码（数字）。如果还没收到，可以先点「发送验证码」。');
+        setIsLoading(false);
+        return;
+      }
     }
 
     let emailRegistered: boolean | undefined = undefined;
@@ -100,7 +118,10 @@ const Auth: React.FC = () => {
     if (isLogin) {
         result = await loginService(email, password);
     } else {
-        result = await registerService(email, password, name);
+        result = await registerWithEmailCodeService(email, password, name, emailCode.trim());
+        if (!result.success && result.message && result.message.includes('未配置 Supabase')) {
+          result = await registerService(email, password, name);
+        }
     }
 
     setIsLoading(false);
@@ -125,7 +146,45 @@ const Auth: React.FC = () => {
   const errorVariant: 'success' | 'info' | 'danger' =
     error.includes('注册成功') || error.includes('验证邮件')
       ? 'success'
-      : (error.includes('还没注册') || error.includes('切到「注册」') ? 'info' : 'danger');
+      : (error.includes('验证码已发送') || error.includes('重置邮件已发送') || error.includes('还没注册') || error.includes('切到「注册」') ? 'info' : 'danger');
+
+  const handleSendCode = async () => {
+    const email = formData.email.trim();
+    setError('');
+
+    if (!email) {
+      setError('请先填写邮箱，再发送验证码。');
+      return;
+    }
+
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if (!emailOk) {
+      setError('邮箱格式不正确：请先输入正确邮箱后再发送验证码。');
+      return;
+    }
+
+    if (codeCooldown > 0 || isSendingCode) return;
+
+    setIsSendingCode(true);
+    const emailCheck = await isEmailRegisteredService(email);
+    if (emailCheck.success && emailCheck.registered === true) {
+      setIsLogin(true);
+      setIsSendingCode(false);
+      setError('这个邮箱已经注册过啦：我们已帮你切到「登录」。如果忘记密码，需要去 Supabase 控制台重置。');
+      return;
+    }
+
+    const res = await sendEmailCodeService(email);
+    setIsSendingCode(false);
+
+    if (res.success) {
+      setCodeCooldown(60);
+      setError(res.message || '验证码已发送，请查收邮箱。');
+      return;
+    }
+
+    setError(res.message || '验证码发送失败，请稍后重试。');
+  };
 
   return (
     <div className="min-h-screen bg-stone-900 flex flex-col relative overflow-hidden w-full">
@@ -188,6 +247,40 @@ const Auth: React.FC = () => {
             </div>
           </div>
 
+          {!isLogin && (
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-stone-400 ml-1">验证码</label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <input
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    placeholder="6 位数字"
+                    value={emailCode}
+                    onChange={(e) => setEmailCode(e.target.value.replace(/[^\d]/g, '').slice(0, 6))}
+                    className="w-full bg-stone-800/50 border border-stone-700 rounded-xl py-3 px-4 text-white placeholder-stone-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all backdrop-blur-sm"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSendCode}
+                  disabled={isSendingCode || codeCooldown > 0}
+                  className={[
+                    'px-4 py-3 rounded-xl text-sm font-medium border transition-all active:scale-[0.98] whitespace-nowrap',
+                    isSendingCode || codeCooldown > 0
+                      ? 'bg-stone-800/40 text-stone-500 border-stone-700 cursor-not-allowed'
+                      : 'bg-stone-800/60 text-amber-200 border-stone-700 hover:border-amber-500/50 hover:text-amber-100',
+                  ].join(' ')}
+                >
+                  {isSendingCode ? '发送中…' : (codeCooldown > 0 ? `${codeCooldown}s` : '发送验证码')}
+                </button>
+              </div>
+              <div className="text-[11px] text-stone-500 px-1">
+                注册需要验证码，避免邮箱被“误写”成别人家的。
+              </div>
+            </div>
+          )}
+
           <div className="space-y-1">
             <label className="text-xs font-medium text-stone-400 ml-1">密码</label>
             <div className="relative">
@@ -207,6 +300,37 @@ const Auth: React.FC = () => {
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
+            {isLogin && (
+              <div className="flex justify-end px-1 pt-1">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const email = formData.email.trim();
+                    setError('');
+                    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+                    if (!email) {
+                      setError('请先填写邮箱，我们才能把重置邮件送到你那里。');
+                      return;
+                    }
+                    if (!emailOk) {
+                      setError('邮箱格式不正确：请先输入正确邮箱，再发送重置邮件。');
+                      return;
+                    }
+                    const emailCheck = await isEmailRegisteredService(email);
+                    if (emailCheck.success && emailCheck.registered === false) {
+                      setIsLogin(false);
+                      setError('这个邮箱还没注册：我们已帮你切到「注册」。先注册，之后才能使用“忘记密码”哦。');
+                      return;
+                    }
+                    const res = await sendPasswordResetEmailService(email);
+                    setError(res.message || (res.success ? '重置邮件已发送，请查收邮箱。' : '重置邮件发送失败，请稍后重试。'));
+                  }}
+                  className="text-xs text-stone-400 hover:text-amber-300 transition-colors"
+                >
+                  忘记密码？
+                </button>
+              </div>
+            )}
           </div>
 
           {error && (
@@ -261,6 +385,8 @@ const Auth: React.FC = () => {
               onClick={() => {
                 setIsLogin(!isLogin);
                 setError('');
+                setEmailCode('');
+                setCodeCooldown(0);
               }}
               className="text-amber-500 font-medium ml-2 hover:text-amber-400 transition-colors"
             >

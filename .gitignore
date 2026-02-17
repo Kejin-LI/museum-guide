@@ -23,3 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 local-npm-cache
+
+# Supabase local CLI artifacts
+supabase/.temp/

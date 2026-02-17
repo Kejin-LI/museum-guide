@@ -10,6 +10,7 @@ export interface SavedPlan {
     image: string;
     status: 'upcoming' | 'draft' | 'completed';
     createdAt?: number;
+    planData?: any;
 }
 
 // Check if Supabase is configured
@@ -51,7 +52,8 @@ export const planService = {
                 startDate: item.start_date,
                 image: item.image,
                 status: item.status,
-                createdAt: new Date(item.created_at).getTime()
+                createdAt: new Date(item.created_at).getTime(),
+                planData: item.plan_data
             }));
         } catch (error) {
             console.error("Failed to load user plans:", error);
@@ -77,6 +79,7 @@ export const planService = {
                     start_date: plan.startDate,
                     image: plan.image,
                     status: plan.status,
+                    plan_data: plan.planData ?? {},
                     updated_at: new Date().toISOString(),
                     // If new, created_at will be set by default or we can force it
                     created_at: plan.createdAt ? new Date(plan.createdAt).toISOString() : new Date().toISOString()
@@ -85,6 +88,35 @@ export const planService = {
             if (error) throw error;
         } catch (e) {
             console.error("Error saving plan:", e);
+        }
+    },
+
+    getPlanById: async (planId: string): Promise<SavedPlan | null> => {
+        if (!isSupabaseConfigured) return null;
+
+        try {
+            const { data, error } = await supabase
+                .from('plans')
+                .select('*')
+                .eq('id', planId)
+                .single();
+
+            if (error || !data) return null;
+
+            return {
+                id: data.id,
+                uid: data.user_id,
+                title: data.title,
+                destination: data.destination,
+                days: data.days,
+                startDate: data.start_date,
+                image: data.image,
+                status: data.status,
+                createdAt: new Date(data.created_at).getTime(),
+                planData: data.plan_data,
+            };
+        } catch {
+            return null;
         }
     },
 

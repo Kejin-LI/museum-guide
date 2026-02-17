@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { MapPin, Heart, Headphones, Calendar, Plus, Map } from 'lucide-react';
 import { planService, type SavedPlan } from '../services/plan';
 import { travelogueService, type TravelogueItem } from '../services/travelogue';
 import ArtisticBackground from '../components/ArtisticBackground';
 
 const Home: React.FC = () => {
+  const navigate = useNavigate();
   const [plans, setPlans] = useState<SavedPlan[]>([]);
   const [travelogues, setTravelogues] = useState<TravelogueItem[]>([]);
   const [greeting, setGreeting] = useState('早安');
@@ -158,7 +159,11 @@ const Home: React.FC = () => {
                 <div className="space-y-4">
                     {/* Sort by creation time (Newest first, which is default order in storage) */}
                     {plans.slice(0, 2).map((plan) => (
-                        <div key={plan.id} className="bg-white rounded-2xl p-3 shadow-sm border border-stone-100 flex space-x-4 active:scale-[0.99] transition-transform">
+                        <div
+                            key={plan.id}
+                            onClick={() => navigate('/plan/edit', { state: { planId: plan.id } })}
+                            className="bg-white rounded-2xl p-3 shadow-sm border border-stone-100 flex space-x-4 active:scale-[0.99] transition-transform cursor-pointer"
+                        >
                             <div className="w-24 h-24 rounded-xl bg-stone-200 overflow-hidden flex-shrink-0 relative">
                                 <img 
                                     alt={plan.destination} 
