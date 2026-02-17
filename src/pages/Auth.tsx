@@ -21,14 +21,6 @@ const Auth: React.FC = () => {
   });
 
   const [error, setError] = useState('');
-  // Use a classical oil painting style image (e.g., Botticelli's Birth of Venus style or similar Renaissance art)
-  // Unsplash ID: photo-1577083552431-6e5fd01aa342 (Classic Art / Renaissance Portrait)
-  const [bgImage, setBgImage] = useState('https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?auto=format&fit=crop&q=80&w=1080');
-
-  const handleImageError = () => {
-      // Fallback to another classical art image
-      setBgImage('https://images.unsplash.com/photo-1576504677634-06b2130bd1f3?auto=format&fit=crop&q=80&w=1080');
-  };
 
   useEffect(() => {
     if (codeCooldown <= 0) return;
@@ -190,11 +182,12 @@ const Auth: React.FC = () => {
     <div className="min-h-screen bg-stone-900 flex flex-col relative overflow-hidden w-full">
       {/* Background Image with Overlay */}
       <div className="absolute inset-0 z-0 bg-stone-800">
-        <img 
-          src={bgImage} 
-          alt="Museum Background" 
-          className="w-full h-full object-cover object-top opacity-50 transition-opacity duration-700"
-          onError={handleImageError}
+        <div
+          className="absolute inset-0 opacity-70"
+          style={{
+            background:
+              'radial-gradient(900px 520px at 20% 10%, rgba(245,158,11,0.22), transparent 60%), radial-gradient(900px 520px at 80% 20%, rgba(14,116,144,0.18), transparent 60%), linear-gradient(135deg, rgba(15,23,42,1), rgba(17,24,39,1))',
+          }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-stone-900 via-stone-900/60 to-transparent"></div>
       </div>

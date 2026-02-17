@@ -5,6 +5,7 @@ import { planService, type SavedPlan } from '../services/plan';
 import { itineraryService, type ItineraryGenerateOutput } from '../services/itinerary';
 import { supabase } from '../lib/supabase';
 import { planAgentService } from '../services/planAgent';
+import { coverPlaceholder } from '../lib/placeholderImage';
 
 // Interfaces
 interface Spot {
@@ -32,19 +33,19 @@ const PlanEditor: React.FC = () => {
   // MOCK_SPOTS moved to local variable or outside component, but since it was removed by mistake in previous edits, let's restore it.
   const MOCK_SPOTS: Record<string, Spot[]> = {
     '北京': [
-      { id: '1', name: '故宫博物院', image: 'https://images.unsplash.com/photo-1599661046289-e31897846e41?auto=format&fit=crop&q=80&w=800', duration: 4.0, tag: '必游' },
-      { id: '2', name: '景山公园', image: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?auto=format&fit=crop&q=80&w=800', duration: 1.5 },
-      { id: '3', name: '南锣鼓巷', image: 'https://images.unsplash.com/photo-1545063328-c8e3fafa16f9?auto=format&fit=crop&q=80&w=800', duration: 2.0 },
-      { id: '4', name: '天坛公园', image: 'https://images.unsplash.com/photo-1598327772641-7299a4c8405d?auto=format&fit=crop&q=80&w=800', duration: 3.0, tag: '世界遗产' },
-      { id: '5', name: '国家博物馆', image: 'https://images.unsplash.com/photo-1565060169689-5f2b2e143c68?auto=format&fit=crop&q=80&w=800', duration: 4.0, tag: '热门' },
-      { id: '6', name: '颐和园', image: 'https://images.unsplash.com/photo-1528695782088-3486241a8775?auto=format&fit=crop&q=80&w=800', duration: 4.0, tag: '皇家园林' },
-      { id: '7', name: '圆明园', image: 'https://images.unsplash.com/photo-1600619842852-c62d0801a613?auto=format&fit=crop&q=80&w=800', duration: 3.0 },
-      { id: '8', name: '雍和宫', image: 'https://images.unsplash.com/photo-1626507422634-97216a759088?auto=format&fit=crop&q=80&w=800', duration: 2.0 },
+      { id: '1', name: '故宫博物院', image: coverPlaceholder('故宫博物院'), duration: 4.0, tag: '必游' },
+      { id: '2', name: '景山公园', image: coverPlaceholder('景山公园'), duration: 1.5 },
+      { id: '3', name: '南锣鼓巷', image: coverPlaceholder('南锣鼓巷'), duration: 2.0 },
+      { id: '4', name: '天坛公园', image: coverPlaceholder('天坛公园'), duration: 3.0, tag: '世界遗产' },
+      { id: '5', name: '国家博物馆', image: coverPlaceholder('国家博物馆'), duration: 4.0, tag: '热门' },
+      { id: '6', name: '颐和园', image: coverPlaceholder('颐和园'), duration: 4.0, tag: '皇家园林' },
+      { id: '7', name: '圆明园', image: coverPlaceholder('圆明园'), duration: 3.0 },
+      { id: '8', name: '雍和宫', image: coverPlaceholder('雍和宫'), duration: 2.0 },
     ],
     'default': [
-      { id: '101', name: '市中心博物馆', image: 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?auto=format&fit=crop&q=80&w=800', duration: 3.0, tag: '必游' },
-      { id: '102', name: '城市公园', image: 'https://images.unsplash.com/photo-1496568816309-51d7c20e3b21?auto=format&fit=crop&q=80&w=800', duration: 2.0 },
-      { id: '103', name: '特色古街', image: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&q=80&w=800', duration: 2.5 },
+      { id: '101', name: '市中心博物馆', image: coverPlaceholder('市中心博物馆'), duration: 3.0, tag: '必游' },
+      { id: '102', name: '城市公园', image: coverPlaceholder('城市公园'), duration: 2.0 },
+      { id: '103', name: '特色古街', image: coverPlaceholder('特色古街'), duration: 2.5 },
     ]
   };
 
@@ -465,7 +466,7 @@ const PlanEditor: React.FC = () => {
           items['day-0-morning']?.[0]?.image ||
           items['day-0-afternoon']?.[0]?.image ||
           items['day-0-night']?.[0]?.image ||
-          'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=400&auto=format&fit=crop';
+          coverPlaceholder(title || state?.destination || '旅行计划');
       const newPlan: SavedPlan = {
           id: planId,
           uid: uid || undefined, // Associate plan with user
