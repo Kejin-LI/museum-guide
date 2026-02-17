@@ -165,7 +165,7 @@ const Plan: React.FC = () => {
   const displayPlans = getFilteredPlans();
 
   return (
-    <div className="flex flex-col h-screen w-full bg-stone-50 text-stone-800 relative overflow-hidden">
+    <div className="flex flex-col h-screen w-full bg-transparent text-stone-800 relative overflow-hidden">
       <div className="absolute inset-0 pointer-events-none z-[1]">
         <div className="absolute -top-28 -right-24 w-[520px] h-[520px] rounded-full bg-gradient-to-br from-amber-200/25 via-violet-200/15 to-indigo-200/15 blur-3xl" />
         <div className="absolute -bottom-32 -left-24 w-[520px] h-[520px] rounded-full bg-gradient-to-tr from-stone-200/25 via-rose-200/15 to-amber-200/15 blur-3xl" />

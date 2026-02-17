@@ -498,7 +498,7 @@ const PlanEditor: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-stone-50 text-stone-800">
+    <div className="flex flex-col h-screen bg-transparent text-stone-800">
       {/* Header */}
       <header className="w-full max-w-3xl mx-auto px-4 py-4 bg-white sticky top-0 z-20 border-b border-stone-100 flex items-center justify-between shadow-sm">
         <button 

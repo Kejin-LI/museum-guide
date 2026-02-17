@@ -4,6 +4,7 @@ import { Lock, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
 import DustText from '../components/DustText';
 import { APP_NAME } from '../config';
 import { supabase } from '../lib/supabase';
+import ArtisticBackground from '../components/ArtisticBackground';
 
 const ResetPassword: React.FC = () => {
   const navigate = useNavigate();
@@ -78,6 +79,7 @@ const ResetPassword: React.FC = () => {
   return (
     <div className="min-h-screen bg-stone-900 flex flex-col relative overflow-hidden w-full">
       <div className="absolute inset-0 z-0 bg-stone-800">
+        <ArtisticBackground mode="full" opacity={0.5} />
         <div className="absolute inset-0 bg-gradient-to-t from-stone-900 via-stone-900/70 to-stone-900/30"></div>
       </div>
 
@@ -192,4 +194,3 @@ const ResetPassword: React.FC = () => {
 };
 
 export default ResetPassword;
-

@@ -15,7 +15,7 @@ const Community: React.FC = () => {
   }, []);
 
   return (
-    <div className="flex flex-col h-full bg-stone-50 text-stone-800 relative overflow-hidden">
+    <div className="flex flex-col h-full bg-transparent text-stone-800 relative overflow-hidden">
       <header className="px-6 py-4 flex justify-between items-center bg-transparent sticky top-0 z-10 relative pt-8">
         <h1 className="text-2xl font-bold font-serif text-stone-900 tracking-wide">社区</h1>
         {/* Simplified Header: Removed Tabs (Recommend/Follow/Local) and Post Button for MVP */}

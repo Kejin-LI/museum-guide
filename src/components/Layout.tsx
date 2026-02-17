@@ -7,7 +7,7 @@ const Layout: React.FC = () => {
   return (
     <div className="flex flex-col h-screen w-full mx-auto bg-stone-50 shadow-2xl overflow-hidden relative">
       <div className="flex-1 overflow-hidden relative">
-        <ArtisticBackground />
+        <ArtisticBackground mode="full" opacity={0.45} />
         <div className="relative z-10 h-full">
           <Outlet />
         </div>

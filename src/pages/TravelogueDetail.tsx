@@ -124,7 +124,7 @@ const TravelogueDetail: React.FC = () => {
   const canEdit = uid && (data.uid === uid || (!data.uid && true)); 
 
   return (
-    <div className="flex flex-col h-screen w-full mx-auto bg-[#FFF9F5] text-stone-800 relative overflow-hidden shadow-2xl">
+    <div className="flex flex-col h-screen w-full mx-auto bg-transparent text-stone-800 relative overflow-hidden shadow-2xl">
       <ArtisticBackground mode="full" opacity={0.34} />
       <div className="flex-1 overflow-y-auto relative z-10 custom-scrollbar">
         {/* Header Image & Nav */}

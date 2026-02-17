@@ -2,7 +2,7 @@ import React from 'react';
 
 const ArtisticBackground: React.FC<{ mode?: 'topFade' | 'full'; opacity?: number; className?: string }> = ({
   mode = 'topFade',
-  opacity = 0.38,
+  opacity = 0.55,
   className = '',
 }) => {
   const svg = `
@@ -89,7 +89,7 @@ const ArtisticBackground: React.FC<{ mode?: 'topFade' | 'full'; opacity?: number
       <img
         src={src}
         alt="Greek Oil Painting Background"
-        className="absolute inset-0 w-full h-full object-cover mix-blend-multiply blur-[0.4px]"
+        className="absolute inset-0 w-full h-full object-cover blur-[0.2px]"
         style={{ opacity, ...(maskStyle || {}) }}
       />
     </div>

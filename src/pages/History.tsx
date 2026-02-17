@@ -50,7 +50,7 @@ const HistoryPage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-stone-50 text-stone-800 w-full shadow-xl">
+    <div className="flex flex-col h-screen bg-transparent text-stone-800 w-full shadow-xl">
       {/* Header */}
       <header className="px-6 py-4 flex items-center bg-white border-b border-stone-100 sticky top-0 z-10">
           <button 

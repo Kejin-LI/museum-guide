@@ -84,7 +84,7 @@ const Home: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen w-full bg-stone-50 text-stone-800 relative overflow-hidden">
+    <div className="flex flex-col h-screen w-full bg-transparent text-stone-800 relative overflow-hidden">
       {/* Header */}
       <header className="w-full max-w-3xl mx-auto px-6 py-4 flex justify-between items-start bg-transparent sticky top-0 z-10 pt-8 relative">
          <div>
