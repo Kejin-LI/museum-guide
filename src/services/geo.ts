@@ -13,6 +13,15 @@ type GeoSearchResult = {
   extratags?: Record<string, string>;
 };
 
+type IpLocateResult = {
+  ip: string | null;
+  province: string;
+  city: string;
+  adcode: string;
+  rectangle: string;
+  center: { lat: number; lng: number } | null;
+} | null;
+
 const isSupabaseConfigured =
   import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_URL.includes('supabase');
 
@@ -48,5 +57,15 @@ export const geoService = {
       return [];
     }
   },
-};
 
+  ipLocate: async (): Promise<IpLocateResult> => {
+    if (!isSupabaseConfigured) return null;
+    try {
+      const { data, error } = await supabase.functions.invoke('geo', { body: { action: 'ip_locate' } });
+      if (error) return null;
+      return (data as IpLocateResult) || null;
+    } catch {
+      return null;
+    }
+  },
+};

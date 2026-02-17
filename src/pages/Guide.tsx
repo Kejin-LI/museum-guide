@@ -676,75 +676,128 @@ const Guide: React.FC = () => {
       let watchId: number | null = null;
       let cancelled = false;
       const hotList = Object.values(MOCK_LOCATIONS).map((loc) => ({ ...loc, distance: 0 }));
+      const storageKey = 'last_geo_v1';
+      let settled = false;
+
+      const persistLastLocation = (latitude: number, longitude: number) => {
+          try {
+              localStorage.setItem(storageKey, JSON.stringify({ lat: latitude, lng: longitude, ts: Date.now() }));
+          } catch {}
+      };
+
+      const applyLocation = (latitude: number, longitude: number) => {
+          setUserRealLocation([latitude, longitude]);
+          persistLastLocation(latitude, longitude);
+
+          const mockWithDistance = Object.values(MOCK_LOCATIONS).map(loc => ({
+              ...loc,
+              distance: getDistanceFromLatLonInKm(latitude, longitude, loc.coordinates[0], loc.coordinates[1])
+          }));
+
+          const mockNearby = mockWithDistance
+              .slice()
+              .sort((a, b) => a.distance - b.distance)
+              .filter(loc => loc.distance < 50);
+
+          const initialList = mockNearby.length > 0 ? mockNearby : hotList;
+          setSortedLocations(initialList);
+          if (!isUserInteractingRef.current) {
+              setFilteredLocations(initialList);
+          }
+
+          if (initialList.length > 0 && initialList[0].distance < 2 && mockNearby.length > 0) {
+              setCurrentLocation(initialList[0]);
+              setStep('agent-chat');
+              setShowPersonaSelector(true);
+          } else {
+              setStep('manual-selection');
+          }
+
+          fetchNearbyMuseums(latitude, longitude)
+              .then((realMuseums) => {
+                  if (cancelled) return;
+                  realMuseumsRef.current = realMuseums;
+                  const combinedNearby = [...realMuseums, ...mockWithDistance]
+                      .sort((a, b) => a.distance - b.distance)
+                      .filter(loc => loc.distance < 50);
+
+                  const hasNearby = combinedNearby.length > 0;
+                  const finalList = hasNearby ? combinedNearby : hotList;
+
+                  setSortedLocations(finalList);
+                  if (!isUserInteractingRef.current) {
+                      setFilteredLocations(finalList);
+                  }
+
+                  if (stepRef.current === 'manual-selection' && !isUserInteractingRef.current) {
+                      const closest = finalList[0];
+                      if (hasNearby && closest && closest.distance < 2) {
+                          setCurrentLocation(closest);
+                          setShowMapSelector(false);
+                          setShowPersonaSelector(true);
+                          setStep('agent-chat');
+                      }
+                  }
+              })
+              .catch(() => {});
+      };
+
+      try {
+          const cached = localStorage.getItem(storageKey);
+          if (cached) {
+              const parsed = JSON.parse(cached);
+              const lat = Number(parsed?.lat);
+              const lng = Number(parsed?.lng);
+              const ts = Number(parsed?.ts);
+              if (Number.isFinite(lat) && Number.isFinite(lng) && Number.isFinite(ts) && Date.now() - ts < 24 * 60 * 60 * 1000) {
+                  applyLocation(lat, lng);
+              }
+          }
+      } catch {}
+
+      const fastFallbackTimer = window.setTimeout(() => {
+          if (cancelled || settled) return;
+          if (stepRef.current === 'locating') {
+              setStep('manual-selection');
+              setSortedLocations(hotList);
+              setFilteredLocations(hotList);
+          }
+          geoService.ipLocate().then((data) => {
+              if (cancelled || settled) return;
+              const c = data?.center;
+              if (c && Number.isFinite(c.lat) && Number.isFinite(c.lng)) {
+                  settled = true;
+                  applyLocation(c.lat, c.lng);
+              }
+          });
+      }, 1200);
 
       // 1. Try to get real location
       if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(
               async (position) => {
+                  settled = true;
+                  window.clearTimeout(fastFallbackTimer);
                   const { latitude, longitude } = position.coords;
-                  setUserRealLocation([latitude, longitude]);
-
-                  // Calculate distances for Mock Locations
-                  const mockWithDistance = Object.values(MOCK_LOCATIONS).map(loc => ({
-                      ...loc,
-                      distance: getDistanceFromLatLonInKm(latitude, longitude, loc.coordinates[0], loc.coordinates[1])
-                  }));
-
-                  const mockNearby = mockWithDistance
-                      .slice()
-                      .sort((a, b) => a.distance - b.distance)
-                      .filter(loc => loc.distance < 50);
-
-                  const initialList = mockNearby.length > 0
-                      ? mockNearby
-                      : hotList;
-
-                  setSortedLocations(initialList);
-                  setFilteredLocations(initialList);
-
-                  if (initialList.length > 0 && initialList[0].distance < 2 && mockNearby.length > 0) {
-                      setCurrentLocation(initialList[0]);
-                      setStep('agent-chat');
-                      setShowPersonaSelector(true);
-                  } else {
-                      setStep('manual-selection');
-                  }
-
-                  fetchNearbyMuseums(latitude, longitude)
-                      .then((realMuseums) => {
-                          if (cancelled) return;
-                          realMuseumsRef.current = realMuseums;
-                          const combinedNearby = [...realMuseums, ...mockWithDistance]
-                              .sort((a, b) => a.distance - b.distance)
-                              .filter(loc => loc.distance < 50);
-
-                          const hasNearby = combinedNearby.length > 0;
-                          const finalList = hasNearby ? combinedNearby : hotList;
-
-                          setSortedLocations(finalList);
-                          if (!isUserInteractingRef.current) {
-                              setFilteredLocations(finalList);
-                          }
-
-                          if (stepRef.current === 'manual-selection' && !isUserInteractingRef.current) {
-                              const closest = finalList[0];
-                              if (hasNearby && closest && closest.distance < 2) {
-                                  setCurrentLocation(closest);
-                                  setShowMapSelector(false);
-                                  setShowPersonaSelector(true);
-                                  setStep('agent-chat');
-                              }
-                          }
-                      })
-                      .catch(() => {});
+                  applyLocation(latitude, longitude);
               },
               (error) => {
+                  window.clearTimeout(fastFallbackTimer);
                   console.error("Geolocation denied or error:", error);
                   // Error handling: Do not guess location. Ask user to select manually.
                   setStep('manual-selection');
                   
                   setSortedLocations(hotList);
                   setFilteredLocations(hotList);
+
+                  geoService.ipLocate().then((data) => {
+                      if (cancelled || settled) return;
+                      const c = data?.center;
+                      if (c && Number.isFinite(c.lat) && Number.isFinite(c.lng)) {
+                          settled = true;
+                          applyLocation(c.lat, c.lng);
+                      }
+                  });
 
                   // 2. Start Background Watching (Persistent Attempt)
                   console.log("Starting background location watch...");
@@ -807,8 +860,8 @@ const Guide: React.FC = () => {
               // Options for faster location (Initial attempt)
               {
                   enableHighAccuracy: false, 
-                  timeout: 8000,
-                  maximumAge: 300000
+                  timeout: 3500,
+                  maximumAge: 10 * 60 * 1000
               }
           );
       } else {
@@ -820,6 +873,7 @@ const Guide: React.FC = () => {
 
       return () => {
           cancelled = true;
+          window.clearTimeout(fastFallbackTimer);
           if (watchId !== null) navigator.geolocation.clearWatch(watchId);
       };
   }, []);

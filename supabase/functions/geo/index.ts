@@ -35,6 +35,9 @@ type GeoRequestBody =
       acceptLanguage?: string;
       viewbox?: { west: number; south: number; east: number; north: number };
       bounded?: boolean;
+    }
+  | {
+      action: 'ip_locate';
     };
 
 const fetchJsonWithTimeout = async <T,>(url: string, init: RequestInit, timeoutMs: number): Promise<T> => {
@@ -130,6 +133,36 @@ const amapAround = async (lat: number, lng: number, keywords: string, limit: num
   return Array.isArray(data?.pois) ? data.pois : [];
 };
 
+const amapIpLocate = async (ip: string | null) => {
+  const key = amapKey();
+  if (!key) return null;
+  const params = new URLSearchParams();
+  params.set('key', key);
+  if (ip) params.set('ip', ip);
+  const url = `https://restapi.amap.com/v3/ip?${params.toString()}`;
+  const data = await fetchJsonWithTimeout<any>(url, { headers: { Accept: 'application/json' } }, 9000);
+  const rect = typeof data?.rectangle === 'string' ? String(data.rectangle) : '';
+  const parts = rect.split(';').map((s: string) => s.trim()).filter(Boolean);
+  const p1 = parts[0]?.split(',') || [];
+  const p2 = parts[1]?.split(',') || [];
+  const lng1 = Number(p1[0]);
+  const lat1 = Number(p1[1]);
+  const lng2 = Number(p2[0]);
+  const lat2 = Number(p2[1]);
+  const center =
+    [lng1, lat1, lng2, lat2].every(Number.isFinite)
+      ? { lat: (lat1 + lat2) / 2, lng: (lng1 + lng2) / 2 }
+      : null;
+  return {
+    ip: ip || null,
+    province: data?.province ? String(data.province) : '',
+    city: Array.isArray(data?.city) ? '' : data?.city ? String(data.city) : '',
+    adcode: data?.adcode ? String(data.adcode) : '',
+    rectangle: rect || '',
+    center,
+  };
+};
+
 const nominatimSearch = async (opts: { q: string; limit: number; acceptLanguage?: string; viewbox?: string; bounded?: boolean }) => {
   const params = new URLSearchParams();
   params.set('format', 'jsonv2');
@@ -184,6 +217,19 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = (await req.json()) as GeoRequestBody;
+
+    if (body.action === 'ip_locate') {
+      const headers = req.headers;
+      const xf = headers.get('x-forwarded-for') || headers.get('x-real-ip') || '';
+      const ip = xf ? xf.split(',')[0].trim() : null;
+      const cacheKey = `geo:ip_locate:${ip || 'na'}`;
+      const cached = await cacheGet(cacheKey);
+      if (cached) return new Response(JSON.stringify(cached), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+
+      const data = await amapIpLocate(ip);
+      await cacheSet(cacheKey, data, 60 * 10);
+      return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
 
     if (body.action === 'search_nearby_museums') {
       const lat = Number(body.lat);
