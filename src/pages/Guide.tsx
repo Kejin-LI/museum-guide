@@ -68,7 +68,6 @@ const isInChinaCoord = (lat: number, lng: number) => lat >= 18 && lat <= 54 && l
 const getTileUrls = (inChina: boolean) => {
     if (inChina) {
         return [
-            'https://webrd0{s}.is.autonavi.com/appmaptile?style=7&x={x}&y={y}&z={z}',
             'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
         ];
     }
@@ -1514,11 +1513,14 @@ const Guide: React.FC = () => {
                   style={{ width: '100%', height: '100%' }}
                   zoomControl={false}
                   attributionControl={false}
+                  zoomAnimation={false}
+                  fadeAnimation={false}
               >
                   <TileLayer
                       url={tileUrls[tileUrlIndex]}
                       attribution={tileAttribution}
                       subdomains={tileSubdomains}
+                      updateWhenZooming={false}
                       eventHandlers={{
                         tileerror: () => {
                           const now = Date.now();
