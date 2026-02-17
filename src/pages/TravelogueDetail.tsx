@@ -113,7 +113,7 @@ const TravelogueDetail: React.FC = () => {
   };
 
   if (!data) {
-      return <div className="flex justify-center items-center h-screen bg-[#FFF9F5]">加载中...</div>;
+      return <div className="flex justify-center items-center h-screen bg-transparent">加载中...</div>;
   }
 
   // Check if current user is author
