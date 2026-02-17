@@ -9,6 +9,7 @@ import { chatService, type ChatSession, type ChatMessage } from '../services/cha
 import { TravelogueGenerator } from '../components/TravelogueGenerator';
 import { travelogueService, type TravelogueItem } from '../services/travelogue';
 import { guideAgentService } from '../services/guideAgent';
+import { geoService } from '../services/geo';
 
 // Create a custom pulsing dot icon using DivIcon
 const createPulsingDot = (color: string) => {
@@ -62,26 +63,21 @@ const getCoverPlaceholder = (title: string) => {
     return svgToDataUri(svg);
 };
 
-const fetchJsonWithTimeout = async <T,>(url: string, timeoutMs: number): Promise<T> => {
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
-    try {
-        const res = await fetch(url, { signal: controller.signal, headers: { Accept: 'application/json' } });
-        const contentType = res.headers.get('content-type') || '';
-        if (!res.ok || !contentType.includes('application/json')) {
-            throw new Error('Bad response');
-        }
-        return (await res.json()) as T;
-    } finally {
-        window.clearTimeout(timeoutId);
-    }
-};
+const isInChinaCoord = (lat: number, lng: number) => lat >= 18 && lat <= 54 && lng >= 73 && lng <= 135;
 
-const MAP_TILE_URLS = [
-    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    'https://{s}.tile.openstreetmap.de/{z}/{x}/{y}.png',
-    'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-];
+const getTileUrls = (inChina: boolean) => {
+    if (inChina) {
+        return [
+            'https://webrd0{s}.is.autonavi.com/appmaptile?style=7&x={x}&y={y}&z={z}',
+            'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+        ];
+    }
+    return [
+        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        'https://{s}.tile.openstreetmap.de/{z}/{x}/{y}.png',
+        'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    ];
+};
 
 // Helper to get a deterministic mock image based on string hash
 const getMockImageForLocation = (id: string, name: string): string => {
@@ -244,47 +240,30 @@ let nominatimDisabledUntil = 0;
 const fetchNearbyMuseums = async (lat: number, lon: number) => {
     const now = Date.now();
     if (now < nominatimDisabledUntil) return [];
-    if (lat >= 18 && lat <= 54 && lon >= 73 && lon <= 135) return [];
-
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 2500);
-
     try {
-        const box = `${lon-0.2},${lat+0.2},${lon+0.2},${lat-0.2}`;
-        const url = `https://nominatim.openstreetmap.org/search?format=json&q=museum&viewbox=${box}&bounded=1&limit=20&accept-language=zh-CN`;
-        
-        const res = await fetch(url, {
-            signal: controller.signal,
-            headers: { Accept: 'application/json' },
-        });
-
-        const contentType = res.headers.get('content-type') || '';
-        if (!res.ok || !contentType.includes('application/json')) {
-            nominatimDisabledUntil = Date.now() + 2 * 60 * 1000;
-            return [];
-        }
-
-        const data = await res.json();
-        
+        const data = await geoService.searchNearbyMuseums(lat, lon, 20);
         if (Array.isArray(data) && data.length > 0) {
-            return data.map((item: any) => ({
-                id: `osm-${item.place_id}`,
-                name: item.name || item.display_name.split(',')[0],
-                area: item.display_name.split(',').slice(1, 3).join(',').trim() || item.display_name, 
-                weather: '实时', 
-                coverImage: getMockImageForLocation(`osm-${item.place_id}`, item.name || 'museum'),
-                recommendations: generateRecommendations(item.name || '博物馆', true),
-                coordinates: [parseFloat(item.lat), parseFloat(item.lon)] as [number, number],
-                distance: getDistanceFromLatLonInKm(lat, lon, parseFloat(item.lat), parseFloat(item.lon)),
-                floorPlanUrl: undefined
-            }));
+            return data.map((item: any) => {
+                const name = item.name || (item.display_name ? String(item.display_name).split(',')[0] : '博物馆');
+                const latV = parseFloat(item.lat);
+                const lonV = parseFloat(item.lon);
+                return {
+                    id: `osm-${item.place_id || `${latV},${lonV}`}`,
+                    name,
+                    area: item.display_name ? String(item.display_name).split(',').slice(1, 3).join(',').trim() || item.display_name : '附近',
+                    weather: '实时',
+                    coverImage: getMockImageForLocation(`osm-${item.place_id || `${latV},${lonV}`}`, name),
+                    recommendations: generateRecommendations(name, /[\u4e00-\u9fa5]/.test(name)),
+                    coordinates: [latV, lonV] as [number, number],
+                    distance: getDistanceFromLatLonInKm(lat, lon, latV, lonV),
+                    floorPlanUrl: undefined
+                };
+            });
         }
         return [];
     } catch (e) {
-        nominatimDisabledUntil = Date.now() + 2 * 60 * 1000;
+        nominatimDisabledUntil = Date.now() + 60 * 1000;
         return [];
-    } finally {
-        window.clearTimeout(timeoutId);
     }
 };
 
@@ -320,6 +299,17 @@ const Guide: React.FC = () => {
   const stepRef = useRef<InteractionStep>(step);
   const isUserInteractingRef = useRef(false);
   const realMuseumsRef = useRef<Array<LocationContext & { distance: number }>>([]);
+  const inChinaForTiles = Boolean(
+      currentLocation?.coordinates && isInChinaCoord(currentLocation.coordinates[0], currentLocation.coordinates[1])
+  );
+  const tileUrls = getTileUrls(inChinaForTiles);
+  const tileSubdomains = inChinaForTiles ? (['1', '2', '3', '4'] as any) : undefined;
+  const tileAttribution = inChinaForTiles ? '' : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+
+  useEffect(() => {
+      setTileUrlIndex(0);
+      setTilesEnabled(true);
+  }, [tileUrls.length, tileUrls[0]]);
 
   const [guidePersona, setGuidePersona] = useState<'expert' | 'humorous' | 'kids'>('expert');
   const [showPersonaSelector, setShowPersonaSelector] = useState(false);
@@ -1141,28 +1131,6 @@ const Guide: React.FC = () => {
           };
       };
 
-      const normalizePhotonFeature = (feature: any, q: string) => {
-          const props = feature?.properties || {};
-          const name = (props['name:zh'] || props['name:zh-CN'] || props['name:zh-Hans'] || props.name || q).trim();
-          const coords = feature?.geometry?.coordinates;
-          const lon = Array.isArray(coords) ? parseFloat(coords[0]) : NaN;
-          const lat = Array.isArray(coords) ? parseFloat(coords[1]) : NaN;
-          const distance = userRealLocation ? getDistanceFromLatLonInKm(userRealLocation[0], userRealLocation[1], lat, lon) : 0;
-          const area = buildAreaLabel([props.city, props.state, props.country]);
-          return {
-              id: `photon-${props.osm_id || `${lat},${lon}`}`,
-              name,
-              area,
-              weather: '未知',
-              coverImage: getMockImageForLocation(`photon-${props.osm_id || `${lat},${lon}`}`, name),
-              recommendations: generateRecommendations(name, /[\u4e00-\u9fa5]/.test(name)),
-              coordinates: [lat, lon] as [number, number],
-              distance,
-              _class: props.osm_key,
-              _type: props.osm_value,
-          };
-      };
-
       const searchRemote = async (q: string) => {
           const cacheKey = `${q}|${userRealLocation ? `${userRealLocation[0].toFixed(3)},${userRealLocation[1].toFixed(3)}` : 'na'}`;
           const cached = searchCacheRef.current.get(cacheKey);
@@ -1170,39 +1138,8 @@ const Guide: React.FC = () => {
 
           const lang = 'zh-CN,en';
           const limit = 8;
-
-          const prefersZh = (navigator.language || '').toLowerCase().startsWith('zh');
-          const inChina = Boolean(
-              userRealLocation &&
-              userRealLocation[0] >= 18 &&
-              userRealLocation[0] <= 54 &&
-              userRealLocation[1] >= 73 &&
-              userRealLocation[1] <= 135
-          );
-          const skipNominatim = inChina || prefersZh;
-          const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(q)}&limit=${limit}&addressdetails=1&extratags=1&namedetails=1&accept-language=${encodeURIComponent(lang)}`;
-
-          const results: any[] = [];
-          const tryPhoton = async () => {
-              try {
-                  const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=${limit}&lang=zh`;
-                  const data = await fetchJsonWithTimeout<any>(photonUrl, 3500);
-                  const features = Array.isArray(data?.features) ? data.features : [];
-                  results.push(...features.map((f: any) => normalizePhotonFeature(f, q)));
-              } catch {}
-          };
-
-          const tryNominatim = async () => {
-              if (skipNominatim) return;
-              try {
-                  const data = await fetchJsonWithTimeout<any[]>(nominatimUrl, 3500);
-                  if (Array.isArray(data)) results.push(...data.map((item) => normalizeNominatimItem(item, q)));
-              } catch {}
-          };
-
-          await tryPhoton();
-          if (results.length === 0) await tryNominatim();
-
+          const raw = await geoService.searchPlaces({ q, limit, acceptLanguage: lang });
+          const results = Array.isArray(raw) ? raw.map((item: any) => normalizeNominatimItem(item, q)) : [];
           const cleaned = results
               .filter((it: any) => Number.isFinite(it.coordinates?.[0]) && Number.isFinite(it.coordinates?.[1]))
               .sort((a: any, b: any) => (scoreItem(b) - scoreItem(a)) || ((a.distance || 0) - (b.distance || 0)))
@@ -1211,177 +1148,6 @@ const Guide: React.FC = () => {
 
           searchCacheRef.current.set(cacheKey, cleaned);
           return cleaned;
-      };
-
-      type BBox = { minLon: number; minLat: number; maxLon: number; maxLat: number; label: string };
-
-      const getAreaCandidate = async (q: string): Promise<BBox | null> => {
-          const trimmed = q.trim();
-          if (!trimmed) return null;
-
-          const isChineseQuery = /[\u4e00-\u9fa5]/.test(trimmed);
-          const looksLikePoiCategory = /(博物馆|美术馆|展览馆|展览|景点|风景区|公园|古迹|纪念馆|museum|gallery|exhibition|attraction|park|viewpoint)/i.test(trimmed);
-          if (looksLikePoiCategory) return null;
-
-          const prefersZh = (navigator.language || '').toLowerCase().startsWith('zh');
-          const inChina = Boolean(
-              userRealLocation &&
-              userRealLocation[0] >= 18 &&
-              userRealLocation[0] <= 54 &&
-              userRealLocation[1] >= 73 &&
-              userRealLocation[1] <= 135
-          );
-          const skipNominatim = inChina || prefersZh;
-          const limit = 1;
-
-          const tryPhoton = async (): Promise<BBox | null> => {
-              try {
-                  const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(trimmed)}&limit=${limit}&lang=${isChineseQuery ? 'zh' : 'en'}`;
-                  const data = await fetchJsonWithTimeout<any>(photonUrl, 3500);
-                  const feature = Array.isArray(data?.features) ? data.features[0] : null;
-                  if (!feature) return null;
-
-                  const props = feature.properties || {};
-                  const osmKey = String(props.osm_key || '').toLowerCase();
-                  const osmVal = String(props.osm_value || '').toLowerCase();
-                  const type = String(props.type || '').toLowerCase();
-                  const label = (props['name:zh'] || props['name:zh-CN'] || props['name:zh-Hans'] || props.name || trimmed).trim();
-
-                  const isArea =
-                      osmKey === 'place' ||
-                      osmKey === 'boundary' ||
-                      ['city', 'town', 'village', 'state', 'country', 'county', 'region', 'district', 'province'].includes(osmVal) ||
-                      ['city', 'town', 'village', 'state', 'country', 'county', 'region', 'district', 'province'].includes(type);
-
-                  if (!isArea) return null;
-
-                  const extent = props.extent;
-                  if (Array.isArray(extent) && extent.length === 4) {
-                      const minLon = parseFloat(extent[0]);
-                      const minLat = parseFloat(extent[1]);
-                      const maxLon = parseFloat(extent[2]);
-                      const maxLat = parseFloat(extent[3]);
-                      if ([minLon, minLat, maxLon, maxLat].every(Number.isFinite)) {
-                          return { minLon, minLat, maxLon, maxLat, label };
-                      }
-                  }
-
-                  const coords = feature.geometry?.coordinates;
-                  const lon = Array.isArray(coords) ? parseFloat(coords[0]) : NaN;
-                  const lat = Array.isArray(coords) ? parseFloat(coords[1]) : NaN;
-                  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
-
-                  return { minLon: lon - 0.8, minLat: lat - 0.6, maxLon: lon + 0.8, maxLat: lat + 0.6, label };
-              } catch {
-                  return null;
-              }
-          };
-
-          const tryNominatim = async (): Promise<BBox | null> => {
-              if (skipNominatim) return null;
-              try {
-                  const lang = 'zh-CN,en';
-                  const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(trimmed)}&limit=${limit}&addressdetails=1&namedetails=1&accept-language=${encodeURIComponent(lang)}`;
-                  const data = await fetchJsonWithTimeout<any[]>(url, 3500);
-                  const item = Array.isArray(data) ? data[0] : null;
-                  if (!item) return null;
-
-                  const cls = String(item.class || '').toLowerCase();
-                  const typ = String(item.type || '').toLowerCase();
-                  const isArea =
-                      cls === 'place' ||
-                      cls === 'boundary' ||
-                      typ.includes('administrative') ||
-                      ['city', 'town', 'village', 'state', 'country', 'county', 'region', 'district', 'province'].includes(typ);
-
-                  if (!isArea) return null;
-
-                  const label = (item?.namedetails?.['name:zh'] || item?.namedetails?.['name:zh-CN'] || item?.namedetails?.['name:zh-Hans'] || item.name || (item.display_name ? String(item.display_name).split(',')[0] : '') || trimmed).trim();
-                  const bb = item.boundingbox;
-                  if (Array.isArray(bb) && bb.length === 4) {
-                      const south = parseFloat(bb[0]);
-                      const north = parseFloat(bb[1]);
-                      const west = parseFloat(bb[2]);
-                      const east = parseFloat(bb[3]);
-                      if ([south, north, west, east].every(Number.isFinite)) {
-                          return { minLon: west, minLat: south, maxLon: east, maxLat: north, label };
-                      }
-                  }
-                  return null;
-              } catch {
-                  return null;
-              }
-          };
-
-          return (await tryPhoton()) || (await tryNominatim());
-      };
-
-      const searchAreaPois = async (q: string): Promise<Array<LocationContext & { distance: number }>> => {
-          const area = await getAreaCandidate(q);
-          if (!area) return [];
-
-          const prefersZh = (navigator.language || '').toLowerCase().startsWith('zh');
-          const inChina = Boolean(
-              userRealLocation &&
-              userRealLocation[0] >= 18 &&
-              userRealLocation[0] <= 54 &&
-              userRealLocation[1] >= 73 &&
-              userRealLocation[1] <= 135
-          );
-          const skipNominatim = inChina || prefersZh;
-
-          const maxTotal = 30;
-          const perQuery = 8;
-          const keywords = [
-              '博物馆',
-              '美术馆',
-              '展览馆',
-              '景点',
-              '公园',
-              '风景区',
-              'museum',
-              'gallery',
-              'attraction',
-              'park',
-              'viewpoint',
-          ];
-
-          const bboxParam = `${area.minLon},${area.minLat},${area.maxLon},${area.maxLat}`;
-
-          const results: Array<LocationContext & { distance: number }> = [];
-
-          const runPhoton = async (keyword: string) => {
-              const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(`${area.label} ${keyword}`)}&limit=${perQuery}&lang=zh&bbox=${encodeURIComponent(bboxParam)}`;
-              try {
-                  const data = await fetchJsonWithTimeout<any>(url, 3500);
-                  const features = Array.isArray(data?.features) ? data.features : [];
-                  results.push(...features.map((f: any) => normalizePhotonFeature(f, q)));
-              } catch {}
-          };
-
-          const runNominatim = async (keyword: string) => {
-              const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(keyword)}&limit=${perQuery}&bounded=1&viewbox=${encodeURIComponent(bboxParam)}&addressdetails=1&namedetails=1&extratags=1&accept-language=${encodeURIComponent('zh-CN,en')}`;
-              try {
-                  const data = await fetchJsonWithTimeout<any[]>(url, 3500);
-                  if (Array.isArray(data)) results.push(...data.map((item) => normalizeNominatimItem(item, q)));
-              } catch {}
-          };
-
-          for (const keyword of keywords) {
-              await runPhoton(keyword);
-              if (results.length >= maxTotal) break;
-          }
-
-          if (!skipNominatim && results.length < 8) {
-              for (const keyword of keywords.slice(0, 6)) {
-                  await runNominatim(keyword);
-                  if (results.length >= maxTotal) break;
-              }
-          }
-
-          return dedupeByKey(results)
-              .sort((a, b) => (scoreItem(b as any) - scoreItem(a as any)) || ((a.distance || 0) - (b.distance || 0)))
-              .slice(0, maxTotal);
       };
 
       const expandQueries = (q: string) => {
@@ -1421,12 +1187,7 @@ const Guide: React.FC = () => {
                   apiResults = await searchRemote(q);
                   if (apiResults.length > 0) break;
               }
-              const areaPois = await searchAreaPois(query);
-              if (areaPois.length > 0) {
-                  setFilteredLocations(dedupeByKey([...localMatches, ...areaPois]));
-              } else {
-                  setFilteredLocations(dedupeByKey([...localMatches, ...apiResults]));
-              }
+              setFilteredLocations(dedupeByKey([...localMatches, ...apiResults]));
           } finally {
               setIsSearching(false);
           }
@@ -1437,22 +1198,47 @@ const Guide: React.FC = () => {
       if (!searchQuery.trim()) return;
       
       const customId = `custom-${Date.now()}`;
-      // Create a temporary custom location
-      const customLoc: LocationContext = {
-          id: customId,
-          name: searchQuery,
-          area: '自定义探索区域',
-          weather: '未知',
-          coverImage: getMockImageForLocation(customId, searchQuery),
-          recommendations: generateRecommendations(searchQuery, true),
-          coordinates: [39.9042, 116.4074], // Default to Beijing if we don't know (or could ask user to pick on map later)
-      };
-      
-      setCurrentLocation(customLoc);
-      setShowMapSelector(false);
-      setShowPersonaSelector(true); // Show selector for custom location too
-      setStep('agent-chat');
-      // Messages will be set after persona selection
+      const name = searchQuery.trim();
+      const fallback: [number, number] = userRealLocation || [39.9042, 116.4074];
+      geoService
+          .searchPlaces({ q: name, limit: 1, acceptLanguage: 'zh-CN,en' })
+          .then((data) => {
+              const first = Array.isArray(data) ? data[0] : null;
+              const lat = first?.lat ? parseFloat(first.lat) : NaN;
+              const lon = first?.lon ? parseFloat(first.lon) : NaN;
+              const coords: [number, number] = Number.isFinite(lat) && Number.isFinite(lon) ? [lat, lon] : fallback;
+              const area = first?.display_name ? String(first.display_name).split(',').slice(1, 3).join(' · ').trim() || '自定义探索区域' : '自定义探索区域';
+              const customLoc: LocationContext = {
+                  id: customId,
+                  name,
+                  area,
+                  weather: '未知',
+                  coverImage: getMockImageForLocation(customId, name),
+                  recommendations: generateRecommendations(name, /[\u4e00-\u9fa5]/.test(name)),
+                  coordinates: coords,
+              };
+
+              setCurrentLocation(customLoc);
+              setShowMapSelector(false);
+              setShowPersonaSelector(true);
+              setStep('agent-chat');
+          })
+          .catch(() => {
+              const customLoc: LocationContext = {
+                  id: customId,
+                  name,
+                  area: '自定义探索区域',
+                  weather: '未知',
+                  coverImage: getMockImageForLocation(customId, name),
+                  recommendations: generateRecommendations(name, /[\u4e00-\u9fa5]/.test(name)),
+                  coordinates: fallback,
+              };
+
+              setCurrentLocation(customLoc);
+              setShowMapSelector(false);
+              setShowPersonaSelector(true);
+              setStep('agent-chat');
+          });
   };
 
   // Mock Location Switch (For Demo - Manual Trigger)
@@ -1730,14 +1516,15 @@ const Guide: React.FC = () => {
                   attributionControl={false}
               >
                   <TileLayer
-                      url={MAP_TILE_URLS[tileUrlIndex]}
-                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                      url={tileUrls[tileUrlIndex]}
+                      attribution={tileAttribution}
+                      subdomains={tileSubdomains}
                       eventHandlers={{
                         tileerror: () => {
                           const now = Date.now();
                           if (now - tileErrorTsRef.current < 1200) return;
                           tileErrorTsRef.current = now;
-                          if (tileUrlIndex < MAP_TILE_URLS.length - 1) {
+                          if (tileUrlIndex < tileUrls.length - 1) {
                             setTileUrlIndex(tileUrlIndex + 1);
                           } else {
                             setTilesEnabled(false);
