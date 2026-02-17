@@ -1,6 +1,10 @@
 import React from 'react';
 
-const ArtisticBackground: React.FC = () => {
+const ArtisticBackground: React.FC<{ mode?: 'topFade' | 'full'; opacity?: number; className?: string }> = ({
+  mode = 'topFade',
+  opacity = 0.38,
+  className = '',
+}) => {
   const svg = `
 <svg xmlns="http://www.w3.org/2000/svg" width="1440" height="960" viewBox="0 0 1440 960">
   <defs>
@@ -71,18 +75,22 @@ const ArtisticBackground: React.FC = () => {
   <rect width="1440" height="960" filter="url(#grain)" opacity="0.8"/>
 </svg>`;
   const src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  const maskStyle =
+    mode === 'topFade'
+      ? {
+          WebkitMaskImage:
+            'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 55%, rgba(0,0,0,0) 100%)',
+          maskImage:
+            'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 55%, rgba(0,0,0,0) 100%)',
+        }
+      : undefined;
   return (
-    <div className="absolute top-0 left-0 w-full h-[720px] pointer-events-none z-0 overflow-hidden">
+    <div className={`absolute inset-0 pointer-events-none z-0 overflow-hidden ${className}`.trim()}>
       <img
         src={src}
         alt="Greek Oil Painting Background"
-        className="absolute inset-0 w-full h-full object-cover opacity-[0.22] mix-blend-multiply blur-[0.6px]"
-        style={{
-          WebkitMaskImage:
-            'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 45%, rgba(0,0,0,0) 100%)',
-          maskImage:
-            'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 45%, rgba(0,0,0,0) 100%)',
-        }}
+        className="absolute inset-0 w-full h-full object-cover mix-blend-multiply blur-[0.4px]"
+        style={{ opacity, ...(maskStyle || {}) }}
       />
     </div>
   );

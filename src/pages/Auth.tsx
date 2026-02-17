@@ -183,8 +183,8 @@ const Auth: React.FC = () => {
     <div className="min-h-screen bg-stone-900 flex flex-col relative overflow-hidden w-full">
       {/* Background Image with Overlay */}
       <div className="absolute inset-0 z-0 bg-stone-800">
-        <ArtisticBackground />
-        <div className="absolute inset-0 bg-gradient-to-t from-stone-900 via-stone-900/60 to-transparent"></div>
+        <ArtisticBackground mode="full" opacity={0.5} />
+        <div className="absolute inset-0 bg-gradient-to-t from-stone-900/85 via-stone-900/35 to-transparent"></div>
       </div>
 
       <div className="flex-1 flex flex-col justify-end px-8 pb-10 relative z-10 max-w-md mx-auto w-full">

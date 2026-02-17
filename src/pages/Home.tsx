@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { MapPin, Heart, Headphones, Calendar, Plus, Map } from 'lucide-react';
 import { planService, type SavedPlan } from '../services/plan';
 import { travelogueService, type TravelogueItem } from '../services/travelogue';
-import ArtisticBackground from '../components/ArtisticBackground';
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
@@ -86,8 +85,6 @@ const Home: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen w-full bg-stone-50 text-stone-800 relative overflow-hidden">
-      <ArtisticBackground />
-
       {/* Header */}
       <header className="w-full max-w-3xl mx-auto px-6 py-4 flex justify-between items-start bg-transparent sticky top-0 z-10 pt-8 relative">
          <div>

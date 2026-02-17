@@ -125,7 +125,7 @@ const TravelogueDetail: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen w-full mx-auto bg-[#FFF9F5] text-stone-800 relative overflow-hidden shadow-2xl">
-      <ArtisticBackground />
+      <ArtisticBackground mode="full" opacity={0.34} />
       <div className="flex-1 overflow-y-auto relative z-10 custom-scrollbar">
         {/* Header Image & Nav */}
       <div className="relative h-64 flex-shrink-0">

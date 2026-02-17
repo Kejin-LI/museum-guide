@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronRight, BookOpen, Map, Award, MessageSquare, LogOut, Camera, UserX } from 'lucide-react';
 import { GUEST_AVATAR, deleteAccountService } from '../services/auth';
 import DustText from '../components/DustText';
-import ArtisticBackground from '../components/ArtisticBackground';
 import { supabase } from '../lib/supabase';
 import { planService, type SavedPlan } from '../services/plan';
 
@@ -132,7 +131,6 @@ const Profile: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen w-full bg-stone-50 text-stone-800 relative overflow-hidden">
-      <ArtisticBackground />
       <header className="w-full max-w-3xl mx-auto px-6 py-4 flex justify-end items-center bg-transparent relative z-10 pt-8">
         {/* Settings button removed */}
       </header>

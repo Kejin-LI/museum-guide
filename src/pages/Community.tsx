@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import ArtisticBackground from '../components/ArtisticBackground';
 import { travelogueService, type TravelogueItem } from '../services/travelogue';
 
 const Community: React.FC = () => {
@@ -17,7 +16,6 @@ const Community: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full bg-stone-50 text-stone-800 relative overflow-hidden">
-      <ArtisticBackground />
       <header className="px-6 py-4 flex justify-between items-center bg-transparent sticky top-0 z-10 relative pt-8">
         <h1 className="text-2xl font-bold font-serif text-stone-900 tracking-wide">社区</h1>
         {/* Simplified Header: Removed Tabs (Recommend/Follow/Local) and Post Button for MVP */}
