@@ -15,14 +15,14 @@ const Community: React.FC = () => {
   }, []);
 
   return (
-    <div className="flex flex-col h-full bg-transparent text-stone-800 relative overflow-hidden">
-      <header className="px-6 py-4 flex justify-between items-center bg-transparent sticky top-0 z-10 relative pt-8">
+    <div className="flex flex-col h-screen w-full bg-transparent text-stone-800 relative overflow-hidden">
+      <header className="w-full max-w-3xl mx-auto px-6 py-4 flex justify-between items-center bg-transparent sticky top-0 z-10 relative pt-8">
         <h1 className="text-2xl font-bold font-serif text-stone-900 tracking-wide">社区</h1>
         {/* Simplified Header: Removed Tabs (Recommend/Follow/Local) and Post Button for MVP */}
       </header>
 
-      <main className="flex-1 p-2 overflow-y-auto relative z-10 pb-24">
-        <div className="columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4">
+      <main className="flex-1 w-full max-w-3xl mx-auto p-2 overflow-y-auto relative z-10 pb-24">
+        <div className="columns-2 md:columns-2 gap-4 space-y-4">
              {travelogues.map((t) => (
                 <Link key={t.id} to={`/travelogue/${t.id}`} className="bg-white rounded-xl overflow-hidden shadow-sm border border-stone-100 break-inside-avoid block active:scale-[0.99] transition-transform">
                     <div className="relative">

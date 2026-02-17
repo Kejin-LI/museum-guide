@@ -283,6 +283,8 @@ const Guide: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [step, setStep] = useState<InteractionStep>('locating'); 
+  const [isLocatingPending, setIsLocatingPending] = useState(true);
+  const [locateNonce, setLocateNonce] = useState(0);
   const [currentLocation, setCurrentLocation] = useState<LocationContext | null>(null);
   const [showMapSelector, setShowMapSelector] = useState(false);
   const [tileUrlIndex, setTileUrlIndex] = useState(0);
@@ -684,6 +686,7 @@ const Guide: React.FC = () => {
       const hotList = Object.values(MOCK_LOCATIONS).map((loc) => ({ ...loc, distance: 0 }));
       const storageKey = 'last_geo_v1';
       let settled = false;
+      setIsLocatingPending(true);
 
       const persistLastLocation = (latitude: number, longitude: number) => {
           try {
@@ -692,6 +695,7 @@ const Guide: React.FC = () => {
       };
 
       const applyLocation = (latitude: number, longitude: number) => {
+          setIsLocatingPending(false);
           setUserRealLocation([latitude, longitude]);
           persistLastLocation(latitude, longitude);
 
@@ -789,7 +793,12 @@ const Guide: React.FC = () => {
               },
               (error) => {
                   window.clearTimeout(fastFallbackTimer);
-                  console.error("Geolocation denied or error:", error);
+                  setIsLocatingPending(false);
+                  try {
+                      console.warn('Geolocation denied or error:', { code: error?.code, message: error?.message });
+                  } catch {
+                      console.warn('Geolocation denied or error');
+                  }
                   // Error handling: Do not guess location. Ask user to select manually.
                   setStep('manual-selection');
                   
@@ -872,17 +881,26 @@ const Guide: React.FC = () => {
           );
       } else {
           // Fallback if no geolocation support
+          setIsLocatingPending(false);
           setStep('manual-selection');
           setSortedLocations(hotList);
           setFilteredLocations(hotList);
       }
 
+      const giveUpTimer = window.setTimeout(() => {
+          if (cancelled) return;
+          if (!settled) {
+              setIsLocatingPending(false);
+          }
+      }, 12000);
+
       return () => {
           cancelled = true;
           window.clearTimeout(fastFallbackTimer);
+          window.clearTimeout(giveUpTimer);
           if (watchId !== null) navigator.geolocation.clearWatch(watchId);
       };
-  }, []);
+  }, [locateNonce]);
 
   // Auto-scroll chat
   useEffect(() => {
@@ -1369,9 +1387,9 @@ const Guide: React.FC = () => {
                   </div>
               </div>
               <div className="text-center space-y-2">
-                  <h3 className="text-xl font-bold font-serif">正在扫描蓝牙信标...</h3>
-                  <p className="text-stone-400 text-sm animate-pulse">精准定位您所在的展馆位置</p>
-                  <p className="text-stone-600 text-xs mt-4">定位中，预计需要 3-5 秒...</p>
+                  <h3 className="text-xl font-bold font-serif">定位中，请稍后</h3>
+                  <p className="text-stone-400 text-sm animate-pulse">正在获取您的当前位置</p>
+                  <p className="text-stone-600 text-xs mt-4">如果长时间无响应，可跳过手动搜索</p>
                   
                   <button 
                       onClick={() => setStep('manual-selection')}
@@ -1396,18 +1414,26 @@ const Guide: React.FC = () => {
 
               <div className="w-full max-w-md space-y-4 animate-in fade-in zoom-in duration-300 flex flex-col h-[80vh]">
                   <div className="text-center space-y-2 flex-shrink-0">
-                      <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border transition-colors ${
-                          userRealLocation ? 'bg-amber-500/20 border-amber-500' : 'bg-stone-800 border-stone-700'
-                      }`}>
-                          <MapPin size={32} className={userRealLocation ? 'text-amber-500' : 'text-stone-400'} />
-                      </div>
+                      {isLocatingPending ? (
+                          <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border transition-colors bg-amber-500/20 border-amber-500">
+                              <Loader2 size={32} className="text-amber-500 animate-spin" />
+                          </div>
+                      ) : (
+                          <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border transition-colors ${
+                              userRealLocation ? 'bg-amber-500/20 border-amber-500' : 'bg-stone-800 border-stone-700'
+                          }`}>
+                              <MapPin size={32} className={userRealLocation ? 'text-amber-500' : 'text-stone-400'} />
+                          </div>
+                      )}
                       <h3 className="text-xl font-bold font-serif">
-                          {hasNearbyWithin50km ? '已定位到当前位置' : '定位失败 / 未检测到任何博物馆/地标'}
+                          {isLocatingPending ? '定位中，请稍后' : hasNearbyWithin50km ? '已定位到当前位置' : '定位失败 / 未检测到任何博物馆/地标'}
                       </h3>
                       <p className="text-stone-400 text-sm">
-                          {hasNearbyWithin50km
-                            ? `系统检测到您在【${nearestName}】附近，您也可以手动搜索`
-                            : '您也可以手动搜索'}
+                          {isLocatingPending
+                            ? '正在尝试获取您的位置，您也可以手动搜索'
+                            : hasNearbyWithin50km
+                              ? `系统检测到您在【${nearestName}】附近，您也可以手动搜索`
+                              : '您也可以手动搜索'}
                       </p>
                   </div>
 
@@ -1429,7 +1455,7 @@ const Guide: React.FC = () => {
 
                   <div className="grid grid-cols-1 gap-3 overflow-y-auto flex-1 min-h-0 pr-1 custom-scrollbar">
                       {/* Only show "Nearby" header if we have real location data */}
-                      {!searchQuery && filteredLocations.length > 0 && (
+                      {!isLocatingPending && !searchQuery && filteredLocations.length > 0 && (
                           <div className="flex items-center px-1 pt-1 pb-2">
                               <Compass size={12} className="text-amber-500 mr-1.5" />
                               <span className="text-xs font-bold text-stone-500 uppercase tracking-wider">
@@ -1440,7 +1466,15 @@ const Guide: React.FC = () => {
                           </div>
                       )}
 
-                      {filteredLocations.map((loc) => (
+                      {isLocatingPending && !searchQuery ? (
+                          <div className="text-center py-10 text-stone-400 text-sm">
+                              <div className="flex items-center justify-center mb-3">
+                                  <Loader2 size={20} className="text-amber-500 animate-spin" />
+                              </div>
+                              定位中，请稍后…
+                          </div>
+                      ) : (
+                          filteredLocations.map((loc) => (
                           <button
                               key={loc.id}
                               onClick={() => handleMuseumSelect(loc.id)}
@@ -1467,7 +1501,7 @@ const Guide: React.FC = () => {
                               </div>
                               <ChevronDown className="-rotate-90 text-stone-500 ml-2" size={16} />
                           </button>
-                      ))}
+                      )))}
                       
                       {/* Always show create option if there is a search query, either as the only option or at the bottom */}
                       {!isSearching && searchQuery && (
@@ -1493,7 +1527,7 @@ const Guide: React.FC = () => {
                       )}
                   </div>
                   
-                  <button onClick={() => { setShowPersonaSelector(false); setStep('locating'); }} className="w-full py-3 text-sm text-stone-500 hover:text-white transition-colors flex-shrink-0">
+                  <button onClick={() => { setIsLocatingPending(true); setShowPersonaSelector(false); setStep('locating'); setLocateNonce((s) => s + 1); }} className="w-full py-3 text-sm text-stone-500 hover:text-white transition-colors flex-shrink-0">
                       重试定位
                   </button>
               </div>
