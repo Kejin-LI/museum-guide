@@ -356,6 +356,12 @@ const Guide: React.FC = () => {
   }, [step]);
 
   useEffect(() => {
+    if (step === 'locating') {
+      setShowPersonaSelector(false);
+    }
+  }, [step]);
+
+  useEffect(() => {
     if (!('speechSynthesis' in window)) return;
     const load = () => setTtsVoices(window.speechSynthesis.getVoices());
     load();
@@ -1487,7 +1493,7 @@ const Guide: React.FC = () => {
                       )}
                   </div>
                   
-                  <button onClick={() => setStep('locating')} className="w-full py-3 text-sm text-stone-500 hover:text-white transition-colors flex-shrink-0">
+                  <button onClick={() => { setShowPersonaSelector(false); setStep('locating'); }} className="w-full py-3 text-sm text-stone-500 hover:text-white transition-colors flex-shrink-0">
                       重试定位
                   </button>
               </div>
@@ -1495,7 +1501,7 @@ const Guide: React.FC = () => {
       )}
 
       {/* Persona Selector Overlay */}
-      {showPersonaSelector && (
+      {showPersonaSelector && step !== 'locating' && (
           <div className="absolute inset-0 z-[800] bg-stone-900/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 animate-in fade-in duration-300">
               {/* Close Button */}
               <button 
